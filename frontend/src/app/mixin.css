@@ -1,0 +1,258 @@
+.ralewayFont {
+  font-family: "Raleway", sans-serif !important;
+}
+
+.domineFont {
+  font-family: "Domine", serif !important;
+}
+
+.domineFont700 {
+  font-weight: 700 !important;
+}
+
+.fontWeight400 {
+  font-weight: 400 !important;
+}
+
+.fontWeight500 {
+  font-weight: 500 !important;
+}
+
+.fontWeight700 {
+  font-weight: 700 !important;
+}
+
+.btn {
+  border-radius: 0px !important;
+  padding: 0.5em;
+  min-width: 20%;
+}
+
+.ctaBtn {
+  z-index: 3;
+}
+
+.alignCenter {
+  align-items: center;
+  display: flex;
+}
+
+.btnWhiteBorder {
+  border: 1px solid white;
+}
+.btnWhiteBorder:hover {
+  background-color: white;
+  color: black !important;
+}
+
+.btnDarkBorder {
+  border: 1px solid black;
+}
+.btnDarkBorder:hover {
+  background-color: black;
+  color: white !important;
+}
+
+.btnDarkBg {
+  color: white;
+  background-color: black;
+}
+
+.noBg {
+  background-color: none !important;
+}
+
+.overlay {
+  /* Optional: You can add an overlay color or gradient */
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Adjust the opacity and color as needed */
+  position: absolute;
+  z-index: 0;
+}
+
+.overlayContactPage {
+  /* Optional: You can add an overlay color or gradient */
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Adjust the opacity and color as needed */
+  z-index: 0;
+}
+
+.overlayServices {
+  /* Optional: You can add an overlay color or gradient */
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.2); /* Adjust the opacity and color as needed */
+  z-index: 2;
+}
+
+.borderRed {
+  border: 1px solid red !important;
+}
+
+.textRight {
+  text-align: right;
+}
+
+.col {
+  padding: 2em;
+  min-height: 4px !important;
+}
+
+.topic {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.centerColumn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-direction: column !important;
+}
+
+.section {
+  width: 100%;
+  margin: auto;
+}
+
+.section100 {
+  min-height: 100vh;
+}
+
+.section95 {
+  min-height: 95vh;
+}
+
+.section90 {
+  min-height: 90vh;
+}
+
+.section75 {
+  min-height: 75vh;
+}
+
+.section60 {
+  min-height: 60vh;
+}
+
+.section55 {
+  min-height: 55vh;
+}
+
+.section50 {
+  min-height: 50vh;
+}
+
+.section45 {
+  min-height: 45vh;
+}
+
+.section40 {
+  min-height: 40vh;
+}
+
+.section35 {
+  min-height: 35vh;
+}
+
+.section30 {
+  min-height: 30vh;
+}
+
+.section25 {
+  min-height: 25vh;
+}
+
+.section20 {
+  min-height: 20vh;
+}
+
+.section15 {
+  min-height: 15vh;
+}
+
+.centerRow {
+  justify-content: center;
+}
+
+.offWhiteBg {
+  background-color: #f7f7f7;
+}
+
+.navbarLink {
+  text-decoration: none;
+  color: inherit;
+  margin: 0.5rem;
+}
+
+/* Override Swiper Navigation Button Styles */
+.swiper-button-next,
+.swiper-button-prev {
+  color: #000000 !important;
+  font-weight: bolder !important;
+  margin: 0 !important;
+  /* Change to your desired color */
+}
+
+/* Optional: Hover styles for better user feedback */
+.swiper-button-next:hover,
+.swiper-button-prev:hover {
+  color: #000000; /* Change to your desired hover color */
+}
+
+/* Override Swiper Pagination Styles */
+.swiper-pagination-bullet {
+  /* Change to your desired color */
+}
+
+/* Optional: Active bullet style */
+.swiper-pagination-bullet-active {
+  background-color: #000000 !important; /* Change to your desired active color */
+}
+
+.positionRelative {
+  position: relative;
+}
+
+.boxShadowNoPad {
+  box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.2);
+  padding: 0 !important;
+}
+
+.boxShadowPad {
+  box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.placeHolder {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: 2 !important;
+}
+
+.footerIcon {
+  color: inherit;
+  text-decoration: none;
+}
+
+.footerCol {
+  padding: 0;
+}
+
+.socialMediaIcons {
+  text-align: center;
+  width: 90%;
+  margin: 0 !important;
+  position: absolute;
+  bottom: 1rem;
+}
+@media (min-width: 768px) {
+  .socialMediaIcons {
+    display: none;
+  }
+}/*# sourceMappingURL=mixin.css.map */

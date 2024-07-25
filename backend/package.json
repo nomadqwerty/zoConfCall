@@ -1,0 +1,28 @@
+{
+  "name": "psymax-video-call",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "build": "next build",
+    "start": "nodemon server.js",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mediasoup": "^3.14.8",
+    "next": "14.1.4",
+    "nodemon": "^3.1.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "socket.io": "^4.7.5",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "eslint": "^8",
+    "eslint-config-next": "14.1.4"
+  }
+}

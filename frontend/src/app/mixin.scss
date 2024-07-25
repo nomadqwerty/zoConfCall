@@ -1,0 +1,287 @@
+$themecolor: red;
+$offwhitecolor: #f7f7f7;
+$navBtnColor: black;
+$overlayColor: rgba(0, 0, 0, 0.5);
+$overlayColorServices: rgba(0, 0, 0, 0.2);
+$lightBtnHoverColor: rgba(0, 0, 0, 0.8);
+$ralewayFont: "Raleway", sans-serif;
+$domineFont: "Domine", serif;
+
+@mixin overlay-shared($color) {
+  /* Optional: You can add an overlay color or gradient */
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: $color; /* Adjust the opacity and color as needed */
+  // border: 1px solid red;
+}
+@mixin boxShadow() {
+  box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+@mixin font-weight-shared($weight) {
+  font-weight: $weight !important;
+}
+.ralewayFont {
+  font-family: "Raleway", sans-serif !important;
+}
+
+.domineFont {
+  font-family: "Domine", serif !important;
+}
+
+.domineFont700 {
+  @include font-weight-shared(700);
+}
+
+.fontWeight400 {
+  @include font-weight-shared(400);
+}
+
+.fontWeight500 {
+  @include font-weight-shared(500);
+}
+
+.fontWeight700 {
+  @include font-weight-shared(700);
+}
+
+.btn {
+  border-radius: 0px !important;
+  padding: 0.5em;
+  min-width: 20%;
+}
+
+.ctaBtn {
+  z-index: 3;
+  // padding: 0.5em;
+}
+
+@mixin btnColor($theme: white) {
+  color: $theme;
+  // border-color: white !important;
+}
+
+@mixin btnColor($theme: white) {
+  color: $theme;
+  // border-color: white !important;
+}
+
+.alignCenter {
+  align-items: center;
+  display: flex;
+}
+@mixin centerCol($align) {
+  display: flex !important;
+  align-items: $align !important;
+  justify-content: center !important;
+  flex-direction: column !important;
+}
+
+.btnWhiteBorder {
+  border: 1px solid white;
+  &:hover {
+    background-color: white;
+    color: black !important;
+  }
+}
+
+.btnDarkBorder {
+  border: 1px solid black;
+  &:hover {
+    background-color:black;
+    color: white !important;
+  }
+}
+
+.btnDarkBg {
+  @include btnColor($theme: white);
+  background-color: black;
+}
+
+.noBg {
+  background-color: none !important;
+}
+
+.overlay {
+  @include overlay-shared($overlayColor);
+  position: absolute;
+  z-index: 0;
+}
+.overlayContactPage {
+  @include overlay-shared($overlayColor);
+  z-index: 0;
+  // }
+  //  .bgImage {
+  //   position: absolute;
+  //   width: 100%;
+  //   height: 100%;
+  //   z-index: 0;
+}
+
+.overlayServices {
+  @include overlay-shared($overlayColorServices);
+  z-index: 2;
+}
+
+.borderRed {
+  border: 1px solid red !important;
+}
+
+.textRight {
+  text-align: right;
+}
+
+.col {
+  padding: 2em;
+  min-height: 4px !important;
+}
+
+.topic {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.centerColumn {
+  @include centerCol($align: center);
+}
+
+@mixin section($height) {
+  min-height: $height;
+}
+.section {
+  width: 100%;
+  margin: auto;
+}
+
+.section100 {
+  @include section(100vh);
+}
+.section95 {
+  @include section(95vh);
+}
+.section90 {
+  @include section(90vh);
+}
+.section75 {
+  @include section(75vh);
+}
+.section60 {
+  @include section(60vh);
+}
+.section55 {
+  @include section(55vh);
+}
+.section50 {
+  @include section(50vh);
+}
+.section45 {
+  @include section(45vh);
+}
+.section40 {
+  @include section(40vh);
+}
+.section35 {
+  @include section(35vh);
+}
+.section30 {
+  @include section(30vh);
+}
+.section25 {
+  @include section(25vh);
+}
+
+.section20 {
+  @include section(20vh);
+}
+.section15 {
+  @include section(15vh);
+}
+
+.centerRow {
+  justify-content: center;
+}
+
+.offWhiteBg {
+  background-color: $offwhitecolor;
+}
+.navbarLink {
+  text-decoration: none;
+  color: inherit;
+  margin: 0.5rem;
+  // margin-bottom: 2rem;
+}
+
+// .active{
+//   border-bottom: 2px solid white;
+//   @media (max-width: 768px) {
+//     border-bottom: none;
+//   }
+// }
+
+/* Override Swiper Navigation Button Styles */
+.swiper-button-next,
+.swiper-button-prev {
+  color: #000000 !important;
+  font-weight: bolder !important;
+  margin: 0 !important;
+  /* Change to your desired color */
+}
+
+/* Optional: Hover styles for better user feedback */
+.swiper-button-next:hover,
+.swiper-button-prev:hover {
+  color: #000000; /* Change to your desired hover color */
+}
+
+/* Override Swiper Pagination Styles */
+.swiper-pagination-bullet {
+  /* Change to your desired color */
+}
+
+/* Optional: Active bullet style */
+.swiper-pagination-bullet-active {
+  background-color: #000000 !important; /* Change to your desired active color */
+}
+
+.positionRelative {
+  position: relative;
+}
+
+.boxShadowNoPad {
+  @include boxShadow();
+  padding: 0 !important;
+}
+
+.boxShadowPad {
+  @include boxShadow();
+}
+
+.placeHolder {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: 2 !important;
+}
+//footer styles
+.footerIcon {
+  color: inherit;
+  text-decoration: none;
+}
+
+.footerCol {
+  padding: 0;
+}
+
+//social media icons on navbar
+
+.socialMediaIcons {
+  text-align: center;
+  width: 90%;
+  margin: 0 !important;
+  position: absolute;
+  bottom: 1rem;
+  @media (min-width: 768px) {
+    display: none;
+  }
+}

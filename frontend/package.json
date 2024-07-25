@@ -1,0 +1,32 @@
+{
+  "name": "psymax-video-call",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.24.1",
+    "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.11.3",
+    "express": "^4.19.2",
+    "mediasoup-client": "^3.7.12",
+    "next": "14.1.4",
+    "react": "^18",
+    "react-bootstrap": "^2.10.2",
+    "react-copy-to-clipboard": "^5.1.0",
+    "react-dom": "^18",
+    "sass": "^1.72.0",
+    "scss": "^0.2.4",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
+    "webrtc-adapter": "^9.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^8",
+    "eslint-config-next": "14.1.4"
+  }
+}
