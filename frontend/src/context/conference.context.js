@@ -5,8 +5,9 @@ const conferenceContext = createContext();
 
 const ConferenceProvider = ({ children }) => {
   // mediaSoup objects
-  const [producerDevices, setProducerDevices] = useState([]);
-  const [roomRouterRtp, setRoomRouterRtp] = useState([]);
+  const [producerDevices, setProducerDevices] = useState(null);
+  const [roomRouterRtp, setRoomRouterRtp] = useState(null);
+  const [producerTransports, setProducerTransports] = useState(null);
 
   let state = {
     mediaSoup: {
@@ -14,6 +15,8 @@ const ConferenceProvider = ({ children }) => {
       setProducerDevices,
       roomRouterRtp,
       setRoomRouterRtp,
+      producerTransports,
+      setProducerTransports,
     },
   };
 

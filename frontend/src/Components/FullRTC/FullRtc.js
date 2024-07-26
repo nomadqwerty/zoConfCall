@@ -20,7 +20,14 @@ const FullRtc = () => {
   const router = useRouter();
   const confState = useContext(conferenceContext);
 
-  const { setRoomRouterRtp, roomRouterRtp } = confState.mediaSoup;
+  const {
+    roomRouterRtp,
+    setRoomRouterRtp,
+    producerDevices,
+    setProducerDevices,
+    producerTransports,
+    setProducerTransports,
+  } = confState.mediaSoup;
 
   useEffect(() => {
     setSocketId(socketObj.id);
@@ -42,9 +49,10 @@ const FullRtc = () => {
             data?.videoRtpCapabilities &&
             data?.screenRtpCapabilities
           ) {
-            console.log(data);
-
-            setRoomRouterRtp(data);
+            if (roomRouterRtp === null) {
+              console.log(data);
+              setRoomRouterRtp(data);
+            }
           }
           // room is set up start setting up to produce streams (video, audio).
         }
@@ -55,10 +63,98 @@ const FullRtc = () => {
   // when room router's rtp is set.
   useEffect(() => {
     if (roomRouterRtp) {
-      console.log(roomRouterRtp);
-      // TODO: sent devices for each router.
+      (async () => {
+        if (producerDevices === null) {
+          console.log(roomRouterRtp);
+          const devices = {};
+          const newVideoDevice = new Device();
+          const newAudioDevice = new Device();
+          const newScreenDevice = new Device();
+
+          devices.videoDevice = newVideoDevice;
+          devices.audioDevice = newAudioDevice;
+          devices.screenDevice = newScreenDevice;
+
+          await devices.videoDevice.load({
+            routerRtpCapabilities: roomRouterRtp.videoRtpCapabilities,
+          });
+
+          await devices.audioDevice.load({
+            routerRtpCapabilities: roomRouterRtp.audioRtpCapabilities,
+          });
+
+          await devices.screenDevice.load({
+            routerRtpCapabilities: roomRouterRtp.screenRtpCapabilities,
+          });
+
+          // TODO: set devices for each router.
+
+          setProducerDevices(devices);
+        }
+      })();
     }
   }, [roomRouterRtp]);
+
+  useEffect(() => {
+    if (producerDevices) {
+      const videoDeviceRtpCapabilities =
+        producerDevices.videoDevice.rtpCapabilities;
+      const audioDeviceRtpCapabilities =
+        producerDevices.audioDevice.rtpCapabilities;
+      const screenDeviceRtpCapabilities =
+        producerDevices.screenDevice.rtpCapabilities;
+      if (
+        videoDeviceRtpCapabilities &&
+        audioDeviceRtpCapabilities &&
+        screenDeviceRtpCapabilities
+      ) {
+        socket.emit(
+          "createWebRtcTransport",
+          { producer: true, consumer: false, accessKey, userName, socketId },
+          (data) => {
+            if (
+              producerDevices.videoDevice &&
+              producerDevices.audioDevice &&
+              producerDevices.screenDevice
+            ) {
+              // create send transport on each producerDevice;
+              const videoProducerTransport =
+                producerDevices.videoDevice.createSendTransport(
+                  data.params.videoParams
+                );
+
+              const audioProducerTransport =
+                producerDevices.audioDevice.createSendTransport(
+                  data.params.audioParams
+                );
+
+              const screenProducerTransport =
+                producerDevices.screenDevice.createSendTransport(
+                  data.params.screenParams
+                );
+
+              if (producerTransports === null) {
+                const transports = {};
+                transports.videoProducerTransport = videoProducerTransport;
+
+                transports.audioProducerTransport = audioProducerTransport;
+
+                transports.screenProducerTransport = screenProducerTransport;
+
+                setProducerTransports(transports);
+              }
+            }
+          }
+        );
+      }
+    }
+  }, [producerDevices]);
+
+  useEffect(() => {
+    if (producerTransports) {
+      console.log(producerTransports);
+    }
+  }, [producerTransports]);
 
   return (
     <main className="containerr m-0 p-0">

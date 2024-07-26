@@ -14,4 +14,16 @@ let videoCodec = {
   },
 };
 
-module.exports = { videoCodec, audioCodec };
+const webRtcTransport_options = {
+  listenIps: [
+    {
+      ip: "0.0.0.0", // replace with relevant IP address
+      announcedIp: "127.0.0.1",
+    },
+  ],
+  enableUdp: true,
+  enableTcp: true,
+  preferUdp: true,
+};
+
+module.exports = { videoCodec, audioCodec, webRtcTransport_options };

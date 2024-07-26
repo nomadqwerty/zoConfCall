@@ -3,11 +3,16 @@ const { createServer } = require("node:http");
 const fs = require("node:fs/promises");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const { join } = require("node:path");
+const { onJoinRoom } = require("./utils/socketHandlers");
 const PORT = 3050;
 const {
   findRoom,
   createWorker,
   createRoomRouters,
+  createRtcTransport,
+  findParticipant,
+  viewObject,
 } = require("./utils/mediaSoupUtils");
 
 const app = express();
@@ -99,95 +104,65 @@ createWorker()
   .catch((err) => console.log(err.message));
 
 io.on("connection", async (socket) => {
+  let socketLog = null;
   //listen for roomAccesskey event on socket join and add socket to the provided acceskey
-  console.log("some one connected", socket.id);
-  socket.on("joinConferenceRoom", async (data, callback) => {
-    const { userName, accessKey, socketId } = data;
+  socketLog?.log("some one connected", socket.id);
 
-    let existingConference = findRoom(conferences, accessKey) || false;
+  // join room;
+  socket.on(
+    "joinConferenceRoom",
+    onJoinRoom(findRoom, createRoomRouters, conferences, workers, socket)
+  );
 
-    console.log(
-      "is there a room for: ",
-      socket.id,
-      existingConference ? true : false
-    );
+  // createWebRtcTransport
+  const transportLog = console;
+  socket.on(
+    "createWebRtcTransport",
+    async ({ producer, consumer, accessKey, userName, socketId }, callback) => {
+      const transObjPath = join(__dirname, "./objectView/transportTxt");
+      const confObjPath = join(__dirname, "./objectView/conferenceTxt");
+      if (producer === true && consumer === false) {
+        // create producer rtc transport for participant based on the room routers.
+        // 1: find room and participant;
+        const conference = findRoom(conferences, accessKey);
+        transportLog?.log(conference.participants);
+        const participant = findParticipant(
+          conference.participants,
+          socketId,
+          userName
+        );
 
-    if (existingConference) {
-      // TODO: add to conference room;
+        transportLog?.log(participant);
 
-      // 2: create participant object
-      const participantId = socketId || socket.id;
-      const participantName = userName;
+        // 2: create producer rtc transport for participant and add to their object
 
-      const newParticipant = {
-        participantId: participantId,
-        participantName: participantName,
-      };
+        const rtcTransports = await createRtcTransport(
+          conference,
+          userName,
+          socketId
+        );
+        transportLog?.log(rtcTransports);
 
-      // 3: add participant to conference:
-      existingConference.participants.push(newParticipant);
+        await viewObject(transObjPath, rtcTransports);
 
-      // 5: return room routers rtp capabilities and tell new participant to start producing;
-      const rtpCapabilities = {};
+        if (rtcTransports) {
+          participant.producers.video.producerTP =
+            rtcTransports.videoRtcTransport;
 
-      rtpCapabilities.videoRtpCapabilities =
-        existingConference.routers.videoRouter.rtpCapabilities;
+          participant.producers.audio.producerTP =
+            rtcTransports.audioRtcTransport;
 
-      rtpCapabilities.screenRtpCapabilities =
-        existingConference.routers.screenRouter.rtpCapabilities;
+          participant.producers.screen.producerTP =
+            rtcTransports.screenRtcTransport;
 
-      rtpCapabilities.audioRtpCapabilities =
-        existingConference.routers.audioRouter.rtpCapabilities;
-
-      callback(rtpCapabilities);
-    } else {
-      // TODO: create conference and add participant to conference room;
-      // 1: create room.
-      const roomId = accessKey;
-      const roomRouters = await createRoomRouters(workers[0]);
-      const newConferenceRoom = {
-        roomId: roomId,
-        participants: [],
-        routers: roomRouters,
-      };
-
-      // 2: create participant object
-      const participantId = socketId || socket.id;
-      const participantName = userName;
-
-      const newParticipant = {
-        participantId: participantId,
-        participantName: participantName,
-      };
-
-      // 3: add participant to conference:
-      newConferenceRoom.participants.push(newParticipant);
-
-      await fs.writeFile("./conferenceTxt", JSON.stringify(newConferenceRoom));
-
-      // 4: add conference to conferences list;
-      conferences.push(newConferenceRoom);
-
-      // 5: return room routers rtp capabilities and tell new participant to start producing;
-      const rtpCapabilities = {};
-
-      rtpCapabilities.videoRtpCapabilities =
-        newConferenceRoom.routers.videoRouter.rtpCapabilities;
-
-      rtpCapabilities.screenRtpCapabilities =
-        newConferenceRoom.routers.screenRouter.rtpCapabilities;
-
-      rtpCapabilities.audioRtpCapabilities =
-        newConferenceRoom.routers.audioRouter.rtpCapabilities;
-
-      callback(rtpCapabilities);
+          await viewObject(confObjPath, conference);
+          callback({
+            params: rtcTransports.params,
+          });
+        }
+      }
     }
-
-    try {
-    } catch (e) {
-      console.log("could not join roomAccessKey", e);
-    }
-  });
+  );
 });
 
 // io.compress(true);
