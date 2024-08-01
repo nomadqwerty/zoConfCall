@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { io } from "socket.io-client";
 import conferenceContext from "@/context/conference.context";
 import { Device } from "mediasoup-client";
+import { videoParams, audioParams } from "@/utils/config";
+import { onJoinRoom, onCreateProducerTP } from "@/utils/socketHandlers";
+import { createProducerDevices } from "@/utils/mediaSoupUtils";
 
 // import Link from "next/link";
 
@@ -14,6 +17,7 @@ let userName = "dave";
 let socketObj = io(process.env.NEXT_PUBLIC_SIGNAL_HOST, {
   transports: ["websocket"],
 });
+
 const FullRtc = () => {
   const [socket, setSocket] = useState(null);
   const [socketId, setSocketId] = useState(null);
@@ -43,19 +47,7 @@ const FullRtc = () => {
           accessKey,
           socketId,
         },
-        (data) => {
-          if (
-            data?.audioRtpCapabilities &&
-            data?.videoRtpCapabilities &&
-            data?.screenRtpCapabilities
-          ) {
-            if (roomRouterRtp === null) {
-              console.log(data);
-              setRoomRouterRtp(data);
-            }
-          }
-          // room is set up start setting up to produce streams (video, audio).
-        }
+        onJoinRoom(roomRouterRtp, setRoomRouterRtp)
       );
     }
   }, [socket]);
@@ -64,33 +56,12 @@ const FullRtc = () => {
   useEffect(() => {
     if (roomRouterRtp) {
       (async () => {
-        if (producerDevices === null) {
-          console.log(roomRouterRtp);
-          const devices = {};
-          const newVideoDevice = new Device();
-          const newAudioDevice = new Device();
-          const newScreenDevice = new Device();
-
-          devices.videoDevice = newVideoDevice;
-          devices.audioDevice = newAudioDevice;
-          devices.screenDevice = newScreenDevice;
-
-          await devices.videoDevice.load({
-            routerRtpCapabilities: roomRouterRtp.videoRtpCapabilities,
-          });
-
-          await devices.audioDevice.load({
-            routerRtpCapabilities: roomRouterRtp.audioRtpCapabilities,
-          });
-
-          await devices.screenDevice.load({
-            routerRtpCapabilities: roomRouterRtp.screenRtpCapabilities,
-          });
-
-          // TODO: set devices for each router.
-
-          setProducerDevices(devices);
-        }
+        await createProducerDevices(
+          producerDevices,
+          roomRouterRtp,
+          Device,
+          setProducerDevices
+        );
       })();
     }
   }, [roomRouterRtp]);
@@ -111,48 +82,256 @@ const FullRtc = () => {
         socket.emit(
           "createWebRtcTransport",
           { producer: true, consumer: false, accessKey, userName, socketId },
-          (data) => {
-            if (
-              producerDevices.videoDevice &&
-              producerDevices.audioDevice &&
-              producerDevices.screenDevice
-            ) {
-              // create send transport on each producerDevice;
-              const videoProducerTransport =
-                producerDevices.videoDevice.createSendTransport(
-                  data.params.videoParams
-                );
-
-              const audioProducerTransport =
-                producerDevices.audioDevice.createSendTransport(
-                  data.params.audioParams
-                );
-
-              const screenProducerTransport =
-                producerDevices.screenDevice.createSendTransport(
-                  data.params.screenParams
-                );
-
-              if (producerTransports === null) {
-                const transports = {};
-                transports.videoProducerTransport = videoProducerTransport;
-
-                transports.audioProducerTransport = audioProducerTransport;
-
-                transports.screenProducerTransport = screenProducerTransport;
-
-                setProducerTransports(transports);
-              }
-            }
-          }
+          onCreateProducerTP(
+            producerDevices,
+            producerTransports,
+            setProducerTransports
+          )
         );
       }
     }
   }, [producerDevices]);
 
   useEffect(() => {
+    // add listeners for video audio producers
     if (producerTransports) {
       console.log(producerTransports);
+
+      // video TP: connect events
+      producerTransports.videoProducerTransport.on(
+        "connect",
+        async ({ dtlsParameters }, callback, errback) => {
+          try {
+            // Signal local DTLS parameters to the server side transport
+            // see server's socket.on('transport-connect', ...)
+            await socket.emit("transport-connect", {
+              dtlsParameters,
+              producer: true,
+              consumer: false,
+              accessKey,
+              userName,
+              socketId,
+              isVideo: true,
+              isAudio: false,
+              isScreen: false,
+            });
+
+            // Tell the transport that parameters were transmitted.
+            callback();
+          } catch (error) {
+            errback(error);
+          }
+        }
+      );
+
+      // TODO: audioTP
+      producerTransports.audioProducerTransport.on(
+        "connect",
+        async ({ dtlsParameters }, callback, errback) => {
+          try {
+            // Signal local DTLS parameters to the server side transport
+            // see server's socket.on('transport-connect', ...)
+            await socket.emit("transport-connect", {
+              dtlsParameters,
+              producer: true,
+              consumer: false,
+              accessKey,
+              userName,
+              socketId,
+              isVideo: false,
+              isAudio: true,
+              isScreen: false,
+            });
+
+            // Tell the transport that parameters were transmitted.
+            callback();
+          } catch (error) {
+            errback(error);
+          }
+        }
+      );
+
+      // TODO: screen TP
+      producerTransports.screenProducerTransport.on(
+        "connect",
+        async ({ dtlsParameters }, callback, errback) => {
+          try {
+            // Signal local DTLS parameters to the server side transport
+            // see server's socket.on('transport-connect', ...)
+            await socket.emit("transport-connect", {
+              dtlsParameters,
+              producer: true,
+              consumer: false,
+              accessKey,
+              userName,
+              socketId,
+              isVideo: false,
+              isAudio: false,
+              isScreen: true,
+            });
+
+            // Tell the transport that parameters were transmitted.
+            callback();
+          } catch (error) {
+            errback(error);
+          }
+        }
+      );
+      //////////////////////////////////////////////////
+      //
+      // video Producer: produce event
+      producerTransports.videoProducerTransport.on(
+        "produce",
+        async (parameters, callback, errback) => {
+          try {
+            // Signal local DTLS parameters to the server side transport
+            // see server's socket.on('transport-connect', ...)
+            await socket.emit(
+              "transport-produce",
+              {
+                kind: parameters.kind,
+                rtpParameters: parameters.rtpParameters,
+                appData: parameters.appData,
+                producer: true,
+                consumer: false,
+                accessKey,
+                userName,
+                socketId,
+                isVideo: true,
+                isAudio: false,
+                isScreen: false,
+              },
+              ({ id }) => {
+                // Tell the transport that parameters were transmitted.
+                console.log(id);
+                callback(id);
+              }
+            );
+          } catch (error) {
+            errback(error);
+          }
+        }
+      );
+
+      // TODO: audio Producer
+      producerTransports.audioProducerTransport.on(
+        "produce",
+        async (parameters, callback, errback) => {
+          try {
+            // Signal local DTLS parameters to the server side transport
+            // see server's socket.on('transport-connect', ...)
+            await socket.emit(
+              "transport-produce",
+              {
+                kind: parameters.kind,
+                rtpParameters: parameters.rtpParameters,
+                appData: parameters.appData,
+                producer: true,
+                consumer: false,
+                accessKey,
+                userName,
+                socketId,
+                isVideo: false,
+                isAudio: true,
+                isScreen: false,
+              },
+              ({ id }) => {
+                // Tell the transport that parameters were transmitted.
+                console.log(id);
+                callback(id);
+              }
+            );
+          } catch (error) {
+            errback(error);
+          }
+        }
+      );
+
+      // TODO: screen Producer
+      producerTransports.screenProducerTransport.on(
+        "produce",
+        async (parameters, callback, errback) => {
+          try {
+            // Signal local DTLS parameters to the server side transport
+            // see server's socket.on('transport-connect', ...)
+            await socket.emit(
+              "transport-produce",
+              {
+                kind: parameters.kind,
+                rtpParameters: parameters.rtpParameters,
+                appData: parameters.appData,
+                producer: true,
+                consumer: false,
+                accessKey,
+                userName,
+                socketId,
+                isVideo: false,
+                isAudio: false,
+                isScreen: true,
+              },
+              ({ id }) => {
+                // Tell the transport that parameters were transmitted.
+                console.log(id);
+                callback(id);
+              }
+            );
+          } catch (error) {
+            errback(error);
+          }
+        }
+      );
+
+      // produce test;
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: true })
+        .then((res) => {
+          res.getTracks().forEach((track) => {
+            if (track.kind === "video") {
+              const vidParams = {
+                track: track,
+                ...videoParams,
+              };
+
+              producerTransports.videoProducerTransport
+                .produce(vidParams)
+                .then((res) => {
+                  console.log(res);
+                })
+                .catch((err) => console.log(err.message));
+            } else if (track.kind === "audio") {
+              const audParams = {
+                track: track,
+                ...audioParams,
+              };
+
+              producerTransports.audioProducerTransport
+                .produce(audParams)
+                .then((res) => {
+                  console.log(res);
+                })
+                .catch((err) => console.log(err.message));
+            }
+          });
+        })
+        .catch((err) => console.log(err.message));
+
+      navigator.mediaDevices.getDisplayMedia().then((res) => {
+        res.getTracks().forEach((track) => {
+          if (track.kind === "video") {
+            const screenParams = {
+              track: track,
+              ...videoParams,
+            };
+
+            producerTransports.screenProducerTransport
+              .produce(screenParams)
+              .then((res) => {
+                console.log(res);
+              })
+              .catch((err) => console.log(err.message));
+          }
+        });
+      });
     }
   }, [producerTransports]);
 

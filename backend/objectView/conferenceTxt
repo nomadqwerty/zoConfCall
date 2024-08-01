@@ -1,1 +1,100 @@
-{"roomId":"123asdf","participants":[{"participantId":"2Uja-ttK9RAI7BptAAA6","participantName":"dave","producers":{"video":{"producerTP":{"_events":{},"_eventsCount":8,"_maxListeners":null,"internal":{"routerId":"5d9eabfe-8744-4ad2-9894-c9e766037acb","transportId":"897f7c54-4a52-44d8-bd7f-7396ceec7a7a"},"channel":{"_events":{},"_eventsCount":3,"_maxListeners":null},"consumers":{},"dataProducers":{},"dataConsumers":{}}},"audio":{"producerTP":{"_events":{},"_eventsCount":8,"_maxListeners":null,"internal":{"routerId":"ed4fadfc-e661-454a-9708-4ea24d44a463","transportId":"a811b4fc-6d64-458c-85d7-782e3c565d20"},"channel":{"_events":{},"_eventsCount":3,"_maxListeners":null},"consumers":{},"dataProducers":{},"dataConsumers":{}}},"screen":{"producerTP":{"_events":{},"_eventsCount":8,"_maxListeners":null,"internal":{"routerId":"fa2b4d6f-18f8-49ad-981b-07f562c30984","transportId":"687ca0fb-4e2a-448d-8b55-2c8ffff99138"},"channel":{"_events":{},"_eventsCount":3,"_maxListeners":null},"consumers":{},"dataProducers":{},"dataConsumers":{}}}}}],"routers":{"videoRouter":{"_events":{},"_eventsCount":1,"_maxListeners":null},"screenRouter":{"_events":{},"_eventsCount":1,"_maxListeners":null},"audioRouter":{"_events":{},"_eventsCount":1,"_maxListeners":null}}}
+{
+  "roomId": "123asdf",
+  "participants": [
+    {
+      "participantId": "C_ItBSACFZiwtUueAAAT",
+      "participantName": "dave",
+      "producers": {
+        "video": {
+          "producerTP": {
+            "_events": {},
+            "_eventsCount": 8,
+            "_maxListeners": null,
+            "internal": {
+              "routerId": "9ee55e3c-6360-4cba-8d31-5532d375df95",
+              "transportId": "ac25103a-eaed-481b-953c-b90a6ded8030"
+            },
+            "channel": {
+              "_events": {},
+              "_eventsCount": 6,
+              "_maxListeners": null
+            },
+            "consumers": {},
+            "dataProducers": {},
+            "dataConsumers": {}
+          },
+          "producer": {
+            "_events": {},
+            "_eventsCount": 2,
+            "_maxListeners": null
+          }
+        },
+        "audio": {
+          "producerTP": {
+            "_events": {},
+            "_eventsCount": 8,
+            "_maxListeners": null,
+            "internal": {
+              "routerId": "48e6d5d0-82b4-4a86-bbe0-93e81e5827c6",
+              "transportId": "96d00c1b-c604-4b0e-b54c-40e4b9093f6e"
+            },
+            "channel": {
+              "_events": {},
+              "_eventsCount": 6,
+              "_maxListeners": null
+            },
+            "consumers": {},
+            "dataProducers": {},
+            "dataConsumers": {}
+          },
+          "producer": {
+            "_events": {},
+            "_eventsCount": 2,
+            "_maxListeners": null
+          }
+        },
+        "screen": {
+          "producerTP": {
+            "_events": {},
+            "_eventsCount": 8,
+            "_maxListeners": null,
+            "internal": {
+              "routerId": "d4218f7c-1a2e-412d-890d-b5fd83f20376",
+              "transportId": "e50720df-6d70-40a6-871d-899a5f743f90"
+            },
+            "channel": {
+              "_events": {},
+              "_eventsCount": 6,
+              "_maxListeners": null
+            },
+            "consumers": {},
+            "dataProducers": {},
+            "dataConsumers": {}
+          },
+          "producer": {
+            "_events": {},
+            "_eventsCount": 2,
+            "_maxListeners": null
+          }
+        }
+      }
+    }
+  ],
+  "routers": {
+    "videoRouter": {
+      "_events": {},
+      "_eventsCount": 1,
+      "_maxListeners": null
+    },
+    "screenRouter": {
+      "_events": {},
+      "_eventsCount": 1,
+      "_maxListeners": null
+    },
+    "audioRouter": {
+      "_events": {},
+      "_eventsCount": 1,
+      "_maxListeners": null
+    }
+  }
+}

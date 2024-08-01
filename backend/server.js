@@ -4,7 +4,7 @@ const fs = require("node:fs/promises");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const { join } = require("node:path");
-const { onJoinRoom } = require("./utils/socketHandlers");
+const { onJoinRoom, onCreateRtcTransport } = require("./utils/socketHandlers");
 const PORT = 3050;
 const {
   findRoom,
@@ -15,6 +15,7 @@ const {
   viewObject,
 } = require("./utils/mediaSoupUtils");
 
+const confObjPath = join(__dirname, "./objectView/conferenceTxt");
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
@@ -115,50 +116,222 @@ io.on("connection", async (socket) => {
   );
 
   // createWebRtcTransport
-  const transportLog = console;
   socket.on(
     "createWebRtcTransport",
-    async ({ producer, consumer, accessKey, userName, socketId }, callback) => {
-      const transObjPath = join(__dirname, "./objectView/transportTxt");
-      const confObjPath = join(__dirname, "./objectView/conferenceTxt");
+    onCreateRtcTransport(
+      findRoom,
+      findParticipant,
+      createRtcTransport,
+      conferences
+    )
+  );
+
+  // Rtc transport handler;
+
+  socket.on(
+    "transport-connect",
+    async (
+      {
+        dtlsParameters,
+        producer,
+        consumer,
+        accessKey,
+        userName,
+        socketId,
+        isVideo,
+        isAudio,
+        isScreen,
+      },
+      callback
+    ) => {
       if (producer === true && consumer === false) {
         // create producer rtc transport for participant based on the room routers.
         // 1: find room and participant;
         const conference = findRoom(conferences, accessKey);
-        transportLog?.log(conference.participants);
+
         const participant = findParticipant(
           conference.participants,
           socketId,
           userName
         );
 
-        transportLog?.log(participant);
+        if (participant.participantId === socketId) {
+          if (isVideo === true && isAudio === false && isScreen === false) {
+            console.log(
+              "connect video producer-TransPort for : ",
+              participant.participantId
+            );
+            const videoProducerTp = participant?.producers.video?.producerTP;
+            if (videoProducerTp) {
+              console.log("Video DTLS PARAMS... ", { dtlsParameters });
+              await videoProducerTp.connect({ dtlsParameters });
+            }
+          } else if (
+            isVideo === false &&
+            isAudio === true &&
+            isScreen === false
+          ) {
+            console.log(
+              "connect audio producer-TransPort for : ",
+              participant.participantId
+            );
 
-        // 2: create producer rtc transport for participant and add to their object
+            const audioProducerTp = participant?.producers.audio?.producerTP;
+            if (audioProducerTp) {
+              console.log("audio DTLS PARAMS... ", { dtlsParameters });
+              await audioProducerTp.connect({ dtlsParameters });
+            }
+          } else if (
+            isVideo === false &&
+            isAudio === false &&
+            isScreen === true
+          ) {
+            console.log(
+              "connect screen producer-TransPort for : ",
+              participant.participantId
+            );
 
-        const rtcTransports = await createRtcTransport(
-          conference,
-          userName,
-          socketId
+            const screenProducerTp = participant?.producers.screen?.producerTP;
+            if (screenProducerTp) {
+              console.log("screen DTLS PARAMS... ", { dtlsParameters });
+              await screenProducerTp.connect({ dtlsParameters });
+            }
+          }
+        }
+      }
+    }
+  );
+
+  socket.on(
+    "transport-produce",
+    async (
+      {
+        kind,
+        rtpParameters,
+        appData,
+        producer,
+        consumer,
+        accessKey,
+        userName,
+        socketId,
+        isVideo,
+        isAudio,
+        isScreen,
+      },
+      callback
+    ) => {
+      console.log(isVideo, isAudio, isScreen, "producing");
+      if (producer === true && consumer === false) {
+        // create producer rtc transport for participant based on the room routers.
+        // 1: find room and participant;
+        const conference = findRoom(conferences, accessKey);
+
+        const participant = findParticipant(
+          conference.participants,
+          socketId,
+          userName
         );
-        transportLog?.log(rtcTransports);
 
-        await viewObject(transObjPath, rtcTransports);
+        if (participant.participantId === socket.id) {
+          if (isVideo === true && isAudio === false && isScreen === false) {
+            console.log("produce video for : ", participant.participantId);
+            const videoProducerTp = participant?.producers.video?.producerTP;
+            const videoObject = participant?.producers.video;
+            if (videoProducerTp) {
+              const videoProducer = await videoProducerTp.produce({
+                kind,
+                rtpParameters,
+              });
+              if (videoProducer) {
+                console.log(
+                  "Producer ID: ",
+                  videoProducer.id,
+                  videoProducer.kind
+                );
 
-        if (rtcTransports) {
-          participant.producers.video.producerTP =
-            rtcTransports.videoRtcTransport;
+                videoProducer.on("transportclose", () => {
+                  console.log("transport for this videoProducer closed ");
+                  videoProducer.close();
+                });
 
-          participant.producers.audio.producerTP =
-            rtcTransports.audioRtcTransport;
+                videoObject.producer = videoProducer;
 
-          participant.producers.screen.producerTP =
-            rtcTransports.screenRtcTransport;
+                await viewObject(confObjPath, conference);
 
-          await viewObject(confObjPath, conference);
-          callback({
-            params: rtcTransports.params,
-          });
+                callback({
+                  id: videoProducer.id,
+                });
+              }
+            }
+          } else if (
+            isVideo === false &&
+            isAudio === true &&
+            isScreen === false
+          ) {
+            console.log("produce audio for : ", participant.participantId);
+            const audioProducerTp = participant?.producers.audio?.producerTP;
+            const audioObject = participant?.producers.audio;
+            if (audioProducerTp) {
+              const audioProducer = await audioProducerTp.produce({
+                kind,
+                rtpParameters,
+              });
+              if (audioProducer) {
+                console.log(
+                  "Producer ID: ",
+                  audioProducer.id,
+                  audioProducer.kind
+                );
+
+                audioProducer.on("transportclose", () => {
+                  console.log("transport for this audioProducer closed ");
+                  audioProducer.close();
+                });
+
+                audioObject.producer = audioProducer;
+
+                await viewObject(confObjPath, conference);
+
+                callback({
+                  id: audioProducer.id,
+                });
+              }
+            }
+          } else if (
+            isVideo === false &&
+            isAudio === false &&
+            isScreen === true
+          ) {
+            console.log("produce screen for : ", participant.participantId);
+            const screenProducerTp = participant?.producers.screen?.producerTP;
+            const screenObject = participant?.producers.screen;
+            if (screenProducerTp) {
+              const screenProducer = await screenProducerTp.produce({
+                kind,
+                rtpParameters,
+              });
+              if (screenProducer) {
+                console.log(
+                  "Producer ID: ",
+                  screenProducer.id,
+                  screenProducer.kind
+                );
+
+                screenProducer.on("transportclose", () => {
+                  console.log("transport for this screenProducer closed ");
+                  screenProducer.close();
+                });
+
+                screenObject.producer = screenProducer;
+
+                await viewObject(confObjPath, conference);
+
+                callback({
+                  id: screenProducer.id,
+                });
+              }
+            }
+          }
         }
       }
     }

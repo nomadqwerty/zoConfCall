@@ -3,6 +3,7 @@ const { join } = require("node:path");
 const { viewObject } = require("./mediaSoupUtils");
 
 const confObjPath = join(__dirname, "../objectView/conferenceTxt");
+const transObjPath = join(__dirname, "../objectView/transportTxt");
 
 const onJoinRoom = (
   findRoom,
@@ -119,4 +120,58 @@ const onJoinRoom = (
   };
 };
 
-module.exports = { onJoinRoom };
+const onCreateRtcTransport = (
+  findRoom,
+  findParticipant,
+  createRtcTransport,
+  conferences
+) => {
+  const transportLog = console;
+  return async (
+    { producer, consumer, accessKey, userName, socketId },
+    callback
+  ) => {
+    if (producer === true && consumer === false) {
+      // create producer rtc transport for participant based on the room routers.
+      // 1: find room and participant;
+      const conference = findRoom(conferences, accessKey);
+      transportLog?.log(conference.participants);
+      const participant = findParticipant(
+        conference.participants,
+        socketId,
+        userName
+      );
+
+      transportLog?.log(participant);
+
+      // 2: create producer rtc transport for participant and add to their object
+
+      const rtcTransports = await createRtcTransport(
+        conference,
+        userName,
+        socketId
+      );
+      transportLog?.log(rtcTransports);
+
+      await viewObject(transObjPath, rtcTransports);
+
+      if (rtcTransports) {
+        participant.producers.video.producerTP =
+          rtcTransports.videoRtcTransport;
+
+        participant.producers.audio.producerTP =
+          rtcTransports.audioRtcTransport;
+
+        participant.producers.screen.producerTP =
+          rtcTransports.screenRtcTransport;
+
+        await viewObject(confObjPath, conference);
+        callback({
+          params: rtcTransports.params,
+        });
+      }
+    }
+  };
+};
+
+module.exports = { onJoinRoom, onCreateRtcTransport };
