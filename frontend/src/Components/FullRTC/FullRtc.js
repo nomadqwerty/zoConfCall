@@ -282,58 +282,150 @@ const FullRtc = () => {
       );
 
       // produce test;
-      navigator.mediaDevices
-        .getUserMedia({ video: true, audio: true })
-        .then((res) => {
-          res.getTracks().forEach((track) => {
-            if (track.kind === "video") {
-              const vidParams = {
-                track: track,
-                ...videoParams,
-              };
+      // navigator.mediaDevices
+      //   .getUserMedia({ video: true, audio: true })
+      //   .then((res) => {
+      //     res.getTracks().forEach((track) => {
+      //       if (track.kind === "video") {
+      //         const vidParams = {
+      //           track: track,
+      //           ...videoParams,
+      //         };
 
-              producerTransports.videoProducerTransport
-                .produce(vidParams)
-                .then((res) => {
-                  console.log(res);
-                })
-                .catch((err) => console.log(err.message));
-            } else if (track.kind === "audio") {
-              const audParams = {
-                track: track,
-                ...audioParams,
-              };
+      //         producerTransports.videoProducerTransport
+      //           .produce(vidParams)
+      //           .then((res) => {
+      //             console.log(res);
+      //           })
+      //           .catch((err) => console.log(err.message));
+      //       } else if (track.kind === "audio") {
+      //         const audParams = {
+      //           track: track,
+      //           ...audioParams,
+      //         };
 
-              producerTransports.audioProducerTransport
-                .produce(audParams)
-                .then((res) => {
-                  console.log(res);
-                })
-                .catch((err) => console.log(err.message));
-            }
-          });
-        })
-        .catch((err) => console.log(err.message));
+      //         producerTransports.audioProducerTransport
+      //           .produce(audParams)
+      //           .then((res) => {
+      //             console.log(res);
+      //           })
+      //           .catch((err) => console.log(err.message));
+      //       }
+      //     });
+      //   })
+      //   .catch((err) => console.log(err.message));
 
-      navigator.mediaDevices.getDisplayMedia().then((res) => {
-        res.getTracks().forEach((track) => {
+      // navigator.mediaDevices.getDisplayMedia().then((res) => {
+      //   res.getTracks().forEach((track) => {
+      //     if (track.kind === "video") {
+      //       const screenParams = {
+      //         track: track,
+      //         ...videoParams,
+      //       };
+
+      //       producerTransports.screenProducerTransport
+      //         .produce(screenParams)
+      //         .then((res) => {
+      //           console.log(res);
+      //         })
+      //         .catch((err) => console.log(err.message));
+      //     }
+      //   });
+      // });
+    }
+  }, [producerTransports]);
+
+  const produceVideoStream = async () => {
+    if (navigator?.mediaDevices) {
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+        // TODO: add local stream to local video object:
+        console.log(videoStream);
+        // TODO: produce track from stream over media soup:
+        videoStream.getTracks().forEach((track) => {
+          if (track.kind === "video") {
+            const vidParams = {
+              track: track,
+              ...videoParams,
+            };
+            // TODO: store producer and and track state
+            producerTransports.videoProducerTransport.produce(vidParams);
+
+            // TODO: after producing stream, emit to server to return list of existing producers on the current router
+          }
+        });
+      } catch (err) {}
+    }
+  };
+
+  const produceAudioStream = async () => {
+    if (navigator?.mediaDevices) {
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: true,
+        });
+        // TODO: add local stream to local video object:
+        console.log(audioStream);
+        // TODO: produce track from stream over media soup:
+        audioStream.getTracks().forEach((track) => {
+          if (track.kind === "audio") {
+            const audParams = {
+              track: track,
+              ...audioParams,
+            };
+            // TODO: store producer and and track state
+            producerTransports.audioProducerTransport.produce(audParams);
+            // TODO: after producing stream, emit to server to return list of existing producers on the current router
+          }
+        });
+      } catch (err) {}
+    }
+  };
+
+  const produceScreenStream = async () => {
+    if (navigator?.mediaDevices) {
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia();
+        // TODO: add local stream to local video object:
+        console.log(screenStream);
+        // TODO: produce track from stream over media soup:
+        screenStream.getTracks().forEach((track) => {
           if (track.kind === "video") {
             const screenParams = {
               track: track,
               ...videoParams,
             };
-
-            producerTransports.screenProducerTransport
-              .produce(screenParams)
-              .then((res) => {
-                console.log(res);
-              })
-              .catch((err) => console.log(err.message));
+            // TODO: store producer and and track state
+            producerTransports.screenProducerTransport.produce(screenParams);
+            // TODO: after producing stream, emit to server to return list of existing producers on the current router
           }
         });
+      } catch (err) {}
+    }
+  };
+
+  // ///////////////////////////////////////////////////////////////////////// consume media
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("new-video", (data) => {
+        console.log("someone is producing a video stream");
+        console.log(data);
+      });
+      socket.on("new-audio", (data) => {
+        console.log("someone is producing an audio stream");
+        console.log(data);
+      });
+      socket.on("new-screen", (data) => {
+        console.log("someone is producing a screen stream");
+        console.log(data);
       });
     }
-  }, [producerTransports]);
+  }, [socket]);
 
   return (
     <main className="containerr m-0 p-0">
@@ -358,7 +450,19 @@ const FullRtc = () => {
       </div>
       <div className="mediaControlWrap m-0 p-0">
         <div className="logoControlWrap"></div>
-        <div className="videoControlWrap"></div>
+        <div className="videoControlWrap">
+          <div className="mediaBtnWrap">
+            <div className="mediaBtn">
+              <button onClick={produceVideoStream}>video</button>
+            </div>
+            <div className="mediaBtn">
+              <button onClick={produceAudioStream}>audio</button>
+            </div>
+            <div className="mediaBtn">
+              <button onClick={produceScreenStream}>screen</button>
+            </div>
+          </div>
+        </div>
         <div className="chatControlWrap"></div>
       </div>
     </main>

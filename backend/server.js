@@ -258,6 +258,12 @@ io.on("connection", async (socket) => {
 
                 await viewObject(confObjPath, conference);
 
+                socket.to(accessKey).emit("new-video", {
+                  from: socketId,
+                  producerId: videoObject.producer.id,
+                  kind: "video",
+                });
+
                 callback({
                   id: videoProducer.id,
                 });
@@ -292,6 +298,12 @@ io.on("connection", async (socket) => {
 
                 await viewObject(confObjPath, conference);
 
+                socket.to(accessKey).emit("new-audio", {
+                  from: socketId,
+                  producerId: audioObject.producer.id,
+                  kind: "audio",
+                });
+
                 callback({
                   id: audioProducer.id,
                 });
@@ -325,6 +337,12 @@ io.on("connection", async (socket) => {
                 screenObject.producer = screenProducer;
 
                 await viewObject(confObjPath, conference);
+
+                socket.to(accessKey).emit("new-screen", {
+                  from: socketId,
+                  producerId: screenObject.producer.id,
+                  kind: "screen",
+                });
 
                 callback({
                   id: screenProducer.id,

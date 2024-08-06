@@ -128,3 +128,17 @@
   margin: auto;
   border: 1px solid black;
 }
+
+/*  */
+
+.mediaBtnWrap {
+  display: flex;
+  /* background: #000; */
+  width: 44%;
+  margin: auto;
+  margin-top: 6vh;
+}
+
+.mediaBtn {
+  padding: 10px;
+}
