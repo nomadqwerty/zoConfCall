@@ -126,8 +126,76 @@ io.on("connection", async (socket) => {
     )
   );
 
-  // Rtc transport handler;
+  // Return all available producers.
+  socket.on("getAvailableProducers", (data, callback) => {
+    let gapLogger = console;
+    const { accessKey, userName, socketId } = data;
+    if (accessKey && userName && socketId) {
+      const conference = findRoom(conferences, accessKey);
+      const participant = findParticipant(
+        conference.participants,
+        socketId,
+        userName
+      );
 
+      if (conference && participant) {
+        const participants = conference.participants;
+        gapLogger.log(participants.length);
+        const avlVideoProducers = {};
+        const avlAudioProducers = {};
+        const avlScreenProducers = {};
+        for (let i = 0; i < participants.length; i++) {
+          if (participants[i].participantId !== socketId) {
+            if (participants[i]?.producers?.video?.producer) {
+              let avlProducer = participants[i].producers.video.producer;
+
+              avlVideoProducers[participants[i].participantId] = {
+                from: participants[i].participantId,
+                producerId: avlProducer.id,
+                kind: "video",
+                rtpCapabilities: conference.routers.videoRouter.rtpCapabilities,
+              };
+
+              // gapLogger.log(avlVideoProducers);
+            }
+            if (participants[i]?.producers?.audio?.producer) {
+              let avlProducer = participants[i].producers.audio.producer;
+
+              avlAudioProducers[participants[i].participantId] = {
+                from: participants[i].participantId,
+                producerId: avlProducer.id,
+                kind: "audio",
+                rtpCapabilities: conference.routers.audioRouter.rtpCapabilities,
+              };
+
+              // gapLogger.log(avlAudioProducers);
+            }
+            if (participants[i]?.producers?.screen?.producer) {
+              let avlProducer = participants[i].producers.screen.producer;
+
+              avlScreenProducers[participants[i].participantId] = {
+                from: participants[i].participantId,
+                producerId: avlProducer.id,
+                kind: "screen",
+                rtpCapabilities:
+                  conference.routers.screenRouter.rtpCapabilities,
+              };
+
+              // gapLogger.log(avlScreenProducers);
+            }
+          }
+        }
+        //
+        callback({
+          avlVideoProducers,
+          avlAudioProducers,
+          avlScreenProducers,
+        });
+      }
+    }
+  });
+
+  // Rtc transport handler;
   socket.on(
     "transport-connect",
     async (
@@ -144,6 +212,7 @@ io.on("connection", async (socket) => {
       },
       callback
     ) => {
+      let tpLogger = null;
       if (producer === true && consumer === false) {
         // create producer rtc transport for participant based on the room routers.
         // 1: find room and participant;
@@ -157,13 +226,13 @@ io.on("connection", async (socket) => {
 
         if (participant.participantId === socketId) {
           if (isVideo === true && isAudio === false && isScreen === false) {
-            console.log(
+            tpLogger?.log(
               "connect video producer-TransPort for : ",
               participant.participantId
             );
             const videoProducerTp = participant?.producers.video?.producerTP;
             if (videoProducerTp) {
-              console.log("Video DTLS PARAMS... ", { dtlsParameters });
+              tpLogger?.log("Video DTLS PARAMS... ", { dtlsParameters });
               await videoProducerTp.connect({ dtlsParameters });
             }
           } else if (
@@ -171,14 +240,14 @@ io.on("connection", async (socket) => {
             isAudio === true &&
             isScreen === false
           ) {
-            console.log(
+            tpLogger?.log(
               "connect audio producer-TransPort for : ",
               participant.participantId
             );
 
             const audioProducerTp = participant?.producers.audio?.producerTP;
             if (audioProducerTp) {
-              console.log("audio DTLS PARAMS... ", { dtlsParameters });
+              tpLogger?.log("audio DTLS PARAMS... ", { dtlsParameters });
               await audioProducerTp.connect({ dtlsParameters });
             }
           } else if (
@@ -186,14 +255,14 @@ io.on("connection", async (socket) => {
             isAudio === false &&
             isScreen === true
           ) {
-            console.log(
+            tpLogger?.log(
               "connect screen producer-TransPort for : ",
               participant.participantId
             );
 
             const screenProducerTp = participant?.producers.screen?.producerTP;
             if (screenProducerTp) {
-              console.log("screen DTLS PARAMS... ", { dtlsParameters });
+              tpLogger?.log("screen DTLS PARAMS... ", { dtlsParameters });
               await screenProducerTp.connect({ dtlsParameters });
             }
           }
@@ -220,7 +289,8 @@ io.on("connection", async (socket) => {
       },
       callback
     ) => {
-      console.log(isVideo, isAudio, isScreen, "producing");
+      let pLogger = null;
+      pLogger?.log(isVideo, isAudio, isScreen, "producing");
       if (producer === true && consumer === false) {
         // create producer rtc transport for participant based on the room routers.
         // 1: find room and participant;
@@ -234,7 +304,7 @@ io.on("connection", async (socket) => {
 
         if (participant.participantId === socket.id) {
           if (isVideo === true && isAudio === false && isScreen === false) {
-            console.log("produce video for : ", participant.participantId);
+            pLogger?.log("produce video for : ", participant.participantId);
             const videoProducerTp = participant?.producers.video?.producerTP;
             const videoObject = participant?.producers.video;
             if (videoProducerTp) {
@@ -243,14 +313,14 @@ io.on("connection", async (socket) => {
                 rtpParameters,
               });
               if (videoProducer) {
-                console.log(
+                pLogger?.log(
                   "Producer ID: ",
                   videoProducer.id,
                   videoProducer.kind
                 );
 
                 videoProducer.on("transportclose", () => {
-                  console.log("transport for this videoProducer closed ");
+                  pLogger?.log("transport for this videoProducer closed ");
                   videoProducer.close();
                 });
 
@@ -262,6 +332,8 @@ io.on("connection", async (socket) => {
                   from: socketId,
                   producerId: videoObject.producer.id,
                   kind: "video",
+                  rtpCapabilities:
+                    conference.routers.videoRouter.rtpCapabilities,
                 });
 
                 callback({
@@ -274,7 +346,7 @@ io.on("connection", async (socket) => {
             isAudio === true &&
             isScreen === false
           ) {
-            console.log("produce audio for : ", participant.participantId);
+            pLogger?.log("produce audio for : ", participant.participantId);
             const audioProducerTp = participant?.producers.audio?.producerTP;
             const audioObject = participant?.producers.audio;
             if (audioProducerTp) {
@@ -283,14 +355,14 @@ io.on("connection", async (socket) => {
                 rtpParameters,
               });
               if (audioProducer) {
-                console.log(
+                pLogger?.log(
                   "Producer ID: ",
                   audioProducer.id,
                   audioProducer.kind
                 );
 
                 audioProducer.on("transportclose", () => {
-                  console.log("transport for this audioProducer closed ");
+                  pLogger?.log("transport for this audioProducer closed ");
                   audioProducer.close();
                 });
 
@@ -302,6 +374,8 @@ io.on("connection", async (socket) => {
                   from: socketId,
                   producerId: audioObject.producer.id,
                   kind: "audio",
+                  rtpCapabilities:
+                    conference.routers.audioRouter.rtpCapabilities,
                 });
 
                 callback({
@@ -314,7 +388,7 @@ io.on("connection", async (socket) => {
             isAudio === false &&
             isScreen === true
           ) {
-            console.log("produce screen for : ", participant.participantId);
+            pLogger?.log("produce screen for : ", participant.participantId);
             const screenProducerTp = participant?.producers.screen?.producerTP;
             const screenObject = participant?.producers.screen;
             if (screenProducerTp) {
@@ -323,14 +397,14 @@ io.on("connection", async (socket) => {
                 rtpParameters,
               });
               if (screenProducer) {
-                console.log(
+                pLogger?.log(
                   "Producer ID: ",
                   screenProducer.id,
                   screenProducer.kind
                 );
 
                 screenProducer.on("transportclose", () => {
-                  console.log("transport for this screenProducer closed ");
+                  pLogger?.log("transport for this screenProducer closed ");
                   screenProducer.close();
                 });
 
@@ -342,6 +416,8 @@ io.on("connection", async (socket) => {
                   from: socketId,
                   producerId: screenObject.producer.id,
                   kind: "screen",
+                  rtpCapabilities:
+                    conference.routers.screenRouter.rtpCapabilities,
                 });
 
                 callback({

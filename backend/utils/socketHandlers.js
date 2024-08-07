@@ -126,7 +126,7 @@ const onCreateRtcTransport = (
   createRtcTransport,
   conferences
 ) => {
-  const transportLog = console;
+  const transportLog = null;
   return async (
     { producer, consumer, accessKey, userName, socketId },
     callback

@@ -18,6 +18,9 @@ let socketObj = io(process.env.NEXT_PUBLIC_SIGNAL_HOST, {
   transports: ["websocket"],
 });
 
+let remoteVideoProducers = {};
+let remoteAudioProducers = {};
+let remoteScreenProducers = {};
 const FullRtc = () => {
   const [socket, setSocket] = useState(null);
   const [socketId, setSocketId] = useState(null);
@@ -280,58 +283,31 @@ const FullRtc = () => {
           }
         }
       );
-
-      // produce test;
-      // navigator.mediaDevices
-      //   .getUserMedia({ video: true, audio: true })
-      //   .then((res) => {
-      //     res.getTracks().forEach((track) => {
-      //       if (track.kind === "video") {
-      //         const vidParams = {
-      //           track: track,
-      //           ...videoParams,
-      //         };
-
-      //         producerTransports.videoProducerTransport
-      //           .produce(vidParams)
-      //           .then((res) => {
-      //             console.log(res);
-      //           })
-      //           .catch((err) => console.log(err.message));
-      //       } else if (track.kind === "audio") {
-      //         const audParams = {
-      //           track: track,
-      //           ...audioParams,
-      //         };
-
-      //         producerTransports.audioProducerTransport
-      //           .produce(audParams)
-      //           .then((res) => {
-      //             console.log(res);
-      //           })
-      //           .catch((err) => console.log(err.message));
-      //       }
-      //     });
-      //   })
-      //   .catch((err) => console.log(err.message));
-
-      // navigator.mediaDevices.getDisplayMedia().then((res) => {
-      //   res.getTracks().forEach((track) => {
-      //     if (track.kind === "video") {
-      //       const screenParams = {
-      //         track: track,
-      //         ...videoParams,
-      //       };
-
-      //       producerTransports.screenProducerTransport
-      //         .produce(screenParams)
-      //         .then((res) => {
-      //           console.log(res);
-      //         })
-      //         .catch((err) => console.log(err.message));
-      //     }
-      //   });
-      // });
+      // TODO: request for all producers
+      socket.emit(
+        "getAvailableProducers",
+        {
+          accessKey,
+          userName,
+          socketId,
+        },
+        (data) => {
+          console.log("existing producers");
+          console.log(data);
+          remoteVideoProducers = {
+            ...remoteVideoProducers,
+            ...data.avlVideoProducers,
+          };
+          remoteAudioProducers = {
+            ...remoteAudioProducers,
+            ...data.avlAudioProducers,
+          };
+          remoteScreenProducers = {
+            ...remoteScreenProducers,
+            ...data.avlScreenProducers,
+          };
+        }
+      );
     }
   }, [producerTransports]);
 
@@ -401,7 +377,6 @@ const FullRtc = () => {
             };
             // TODO: store producer and and track state
             producerTransports.screenProducerTransport.produce(screenParams);
-            // TODO: after producing stream, emit to server to return list of existing producers on the current router
           }
         });
       } catch (err) {}
@@ -415,14 +390,19 @@ const FullRtc = () => {
       socket.on("new-video", (data) => {
         console.log("someone is producing a video stream");
         console.log(data);
+        remoteVideoProducers[data.from] = data;
+        console.log(remoteVideoProducers);
       });
       socket.on("new-audio", (data) => {
         console.log("someone is producing an audio stream");
-        console.log(data);
+        remoteAudioProducers[data.from] = data;
+        console.log(remoteAudioProducers);
       });
       socket.on("new-screen", (data) => {
         console.log("someone is producing a screen stream");
         console.log(data);
+        remoteScreenProducers[data.from] = data;
+        console.log(remoteScreenProducers);
       });
     }
   }, [socket]);

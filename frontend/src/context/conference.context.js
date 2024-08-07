@@ -8,6 +8,9 @@ const ConferenceProvider = ({ children }) => {
   const [producerDevices, setProducerDevices] = useState(null);
   const [roomRouterRtp, setRoomRouterRtp] = useState(null);
   const [producerTransports, setProducerTransports] = useState(null);
+  const [remoteVideoProducers, setRemoteVideoProducers] = useState({});
+  const [remoteAudioProducers, setRemoteAudioProducers] = useState({});
+  const [remoteScreenProducers, setRemoteScreenProducers] = useState({});
 
   let state = {
     mediaSoup: {
@@ -17,6 +20,12 @@ const ConferenceProvider = ({ children }) => {
       setRoomRouterRtp,
       producerTransports,
       setProducerTransports,
+      remoteVideoProducers,
+      setRemoteVideoProducers,
+      remoteAudioProducers,
+      setRemoteAudioProducers,
+      remoteScreenProducers,
+      setRemoteScreenProducers,
     },
   };
 
