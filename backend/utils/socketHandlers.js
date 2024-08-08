@@ -40,6 +40,11 @@ const onJoinRoom = (
           audio: {},
           screen: {},
         },
+        consumers: {
+          video: [],
+          audio: [],
+          screen: [],
+        },
       };
 
       // 3: add participant to conference:
@@ -84,6 +89,11 @@ const onJoinRoom = (
           video: {},
           audio: {},
           screen: {},
+        },
+        consumers: {
+          video: [],
+          audio: [],
+          screen: [],
         },
       };
 

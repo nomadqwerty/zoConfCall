@@ -64,7 +64,13 @@ conference :{
       
       },
 
-    consumers:[],
+    consumers:{
+
+      video:[],
+      audio:[],
+      screen:[]
+
+        }
     }
 
     ///////: single consumer item in conference.participants[0].consumers list;
@@ -423,6 +429,197 @@ io.on("connection", async (socket) => {
                 callback({
                   id: screenProducer.id,
                 });
+              }
+            }
+          }
+        }
+      }
+    }
+  );
+
+  socket.on(
+    "createRcvTransport",
+    async (
+      {
+        producer,
+        consumer,
+        accessKey,
+        userName,
+        socketId,
+        isVideo,
+        isAudio,
+        isScreen,
+        participantId,
+      },
+      callback
+    ) => {
+      const rcvLogger = console;
+      rcvLogger?.log("creating consumers for: ", participantId);
+      if (producer === false && consumer === true) {
+        const conference = findRoom(conferences, accessKey);
+        const participant = findParticipant(
+          conference.participants,
+          socketId,
+          userName
+        );
+        if (participant) {
+          const webRtcTransport_options = {
+            listenIps: [
+              {
+                ip: "0.0.0.0", // replace with relevant IP address
+                announcedIp: "127.0.0.1",
+              },
+            ],
+            enableUdp: true,
+            enableTcp: true,
+            preferUdp: true,
+          };
+          if (isVideo === true) {
+            rcvLogger.log(participant.consumers.video);
+            const newConsumer = {};
+            newConsumer.fromId = participantId;
+            newConsumer.consumerTransport =
+              await conference.routers.videoRouter.createWebRtcTransport(
+                webRtcTransport_options
+              );
+
+            rcvLogger.log(
+              "new video consumer transport id: ",
+              newConsumer.consumerTransport.id
+            );
+            newConsumer.consumerTransport.on("dtlsstatechange", (dtlsState) => {
+              if (dtlsState === "closed") {
+                newConsumer.consumerTransport.close();
+              }
+            });
+            newConsumer.consumerTransport.on("close", () => {
+              rcvLogger.log("transport closed");
+            });
+            participant.consumers.video.push(newConsumer);
+
+            callback({
+              params: {
+                id: newConsumer.consumerTransport.id,
+                iceParameters: newConsumer.consumerTransport.iceParameters,
+                iceCandidates: newConsumer.consumerTransport.iceCandidates,
+                dtlsParameters: newConsumer.consumerTransport.dtlsParameters,
+              },
+            });
+          }
+        }
+        await viewObject(confObjPath, conference);
+      }
+    }
+  );
+  socket.on(
+    "transport-recv-connect",
+    async (
+      {
+        dtlsParameters,
+        producer,
+        consumer,
+        accessKey,
+        userName,
+        socketId,
+        isVideo,
+        isAudio,
+        isScreen,
+        participantId,
+      },
+      callback
+    ) => {
+      const rcvLogger = console;
+      rcvLogger?.log("connecting consumer for: ", participantId);
+      if (producer === false && consumer === true) {
+        const conference = findRoom(conferences, accessKey);
+        const participant = findParticipant(
+          conference.participants,
+          socketId,
+          userName
+        );
+        if (participant) {
+          if (isVideo === true) {
+            const videoConsumers = participant.consumers.video;
+            for (let i = 0; i < videoConsumers.length; i++) {
+              if (videoConsumers[i].fromId === participantId) {
+                console.log(
+                  `DTLS PARAMS: ${dtlsParameters} for ${participantId}`
+                );
+                videoConsumers[i].consumerTransport.connect({
+                  dtlsParameters,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  );
+
+  socket.on(
+    "consume",
+    async (
+      {
+        rtpCapabilities,
+        producer,
+        consumer,
+        accessKey,
+        userName,
+        socketId,
+        isVideo,
+        isAudio,
+        isScreen,
+        participantId,
+        remoteProducerId,
+      },
+      callback
+    ) => {
+      const rcvLogger = console;
+      rcvLogger?.log("starting consumers for: ", participantId);
+      if (producer === false && consumer === true) {
+        const conference = findRoom(conferences, accessKey);
+        const participant = findParticipant(
+          conference.participants,
+          socketId,
+          userName
+        );
+        if (participant) {
+          if (isVideo === true) {
+            if (
+              conference.routers.videoRouter.canConsume({
+                producerId: remoteProducerId,
+                rtpCapabilities,
+              })
+            ) {
+              const videoConsumers = participant.consumers.video;
+              for (let i = 0; i < videoConsumers.length; i++) {
+                if (videoConsumers[i].fromId === participantId) {
+                  videoConsumers[i].consumer = await videoConsumers[
+                    i
+                  ].consumerTransport.consume({
+                    producerId: remoteProducerId,
+                    rtpCapabilities,
+                    paused: true,
+                  });
+
+                  videoConsumers[i].consumer.on("transportclose", () => {
+                    console.log("transport close from consumer");
+                  });
+
+                  videoConsumers[i].consumer.on("producerclose", () => {
+                    console.log("producer of consumer closed");
+                  });
+                  await viewObject(confObjPath, conference);
+
+                  callback({
+                    params: {
+                      id: videoConsumers[i].consumer.id,
+                      producerId: remoteProducerId,
+                      kind: videoConsumers[i].consumer.kind,
+                      rtpParameters: videoConsumers[i].consumer.rtpParameters,
+                    },
+                  });
+                }
               }
             }
           }

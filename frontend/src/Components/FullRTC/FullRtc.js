@@ -23,6 +23,7 @@ let remoteAudioProducers = {};
 let remoteScreenProducers = {};
 const FullRtc = () => {
   const [socket, setSocket] = useState(null);
+  const [consumeVideoState, setConsumeVideoState] = useState("");
   const [socketId, setSocketId] = useState(null);
   const router = useRouter();
   const confState = useContext(conferenceContext);
@@ -298,6 +299,7 @@ const FullRtc = () => {
             ...remoteVideoProducers,
             ...data.avlVideoProducers,
           };
+          setConsumeVideoState("consumeAll");
           remoteAudioProducers = {
             ...remoteAudioProducers,
             ...data.avlAudioProducers,
@@ -392,6 +394,7 @@ const FullRtc = () => {
         console.log(data);
         remoteVideoProducers[data.from] = data;
         console.log(remoteVideoProducers);
+        setConsumeVideoState(data.from);
       });
       socket.on("new-audio", (data) => {
         console.log("someone is producing an audio stream");
@@ -406,6 +409,106 @@ const FullRtc = () => {
       });
     }
   }, [socket]);
+
+  useEffect(() => {
+    if (consumeVideoState?.length > 0) {
+      console.log("reset video consumer state");
+      const keys = Object.keys(remoteVideoProducers);
+      console.log(keys);
+      for (let i = 0; i < keys.length; i++) {
+        const remoteProducer = remoteVideoProducers[keys[i]];
+        if (!remoteProducer?.consumerDevice) {
+          console.log("setup video consumer device for: ", remoteProducer.from);
+          socket.emit(
+            "createRcvTransport",
+            {
+              producer: false,
+              consumer: true,
+              accessKey,
+              userName,
+              socketId,
+              isVideo: true,
+              isAudio: false,
+              isScreen: false,
+              participantId: remoteProducer.from,
+            },
+            async (data) => {
+              console.log(data);
+              let params = data?.params;
+              if (params) {
+                remoteProducer.consumerDevice = new Device();
+                await remoteProducer.consumerDevice.load({
+                  routerRtpCapabilities: remoteProducer.rtpCapabilities,
+                });
+                remoteProducer.consumerTransport =
+                  remoteProducer.consumerDevice.createRecvTransport(params);
+                console.log(
+                  "created remote consumer tp for: ",
+                  remoteProducer.from
+                );
+                console.log(remoteProducer);
+                remoteProducer.consumerTransport.on(
+                  "connect",
+                  async ({ dtlsParameters }, callback, errback) => {
+                    try {
+                      await socket.emit("transport-recv-connect", {
+                        dtlsParameters,
+                        producer: false,
+                        consumer: true,
+                        accessKey,
+                        userName,
+                        socketId,
+                        isVideo: true,
+                        isAudio: false,
+                        isScreen: false,
+                        participantId: remoteProducer.from,
+                      });
+
+                      callback();
+                    } catch (error) {
+                      errback(error);
+                    }
+                  }
+                );
+                socket.emit(
+                  "consume",
+                  {
+                    rtpCapabilities:
+                      remoteProducer.consumerDevice.rtpCapabilities,
+                    producer: false,
+                    consumer: true,
+                    accessKey,
+                    userName,
+                    socketId,
+                    isVideo: true,
+                    isAudio: false,
+                    isScreen: false,
+                    participantId: remoteProducer.from,
+                    remoteProducerId: remoteProducer.producerId,
+                  },
+                  async (data) => {
+                    console.log(data);
+                    const params = data.params;
+                    if (params) {
+                      let consumerData =
+                        await remoteProducer.consumerTransport.consume({
+                          id: params.id,
+                          producerId: params.producerId,
+                          kind: params.kind,
+                          rtpParameters: params.rtpParameters,
+                        });
+
+                      console.log(consumerData);
+                    }
+                  }
+                );
+              }
+            }
+          );
+        }
+      }
+    }
+  }, [consumeVideoState]);
 
   return (
     <main className="containerr m-0 p-0">
