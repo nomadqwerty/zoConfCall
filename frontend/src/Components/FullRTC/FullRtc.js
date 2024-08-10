@@ -134,6 +134,34 @@ const FullRtc = () => {
           setConsumeScreenState
         )
       );
+
+      socket.on("participantLeft", (data) => {
+        console.log("participantLeft id: ", data.participantId);
+        if (
+          remoteVideoProducers[data.participantId] ||
+          remoteAudioProducers[data.participantId] ||
+          remoteScreenProducers[data.participantId]
+        ) {
+          socket.emit("deleteRcvTransport", {
+            accessKey,
+            userName,
+            socketId,
+            participantId: data.participantId,
+          });
+        }
+        if (remoteVideoProducers[data.participantId]) {
+          delete remoteVideoProducers[data.participantId];
+          console.log(remoteVideoProducers);
+        }
+        if (remoteAudioProducers[data.participantId]) {
+          delete remoteAudioProducers[data.participantId];
+          console.log(remoteAudioProducers);
+        }
+        if (remoteScreenProducers[data.participantId]) {
+          delete remoteScreenProducers[data.participantId];
+          console.log(remoteScreenProducers);
+        }
+      });
     }
   }, [producerTransports]);
 

@@ -123,7 +123,23 @@ io.on("connection", async (socket) => {
   let socketLog = null;
   //listen for roomAccesskey event on socket join and add socket to the provided acceskey
   socketLog?.log("some one connected", socket.id);
-
+  socket.on("disconnect", async () => {
+    console.log("socket left id: ", socket.id);
+    for (let i = 0; i < conferences.length; i++) {
+      let participants = conferences[i].participants;
+      for (let j = 0; j < participants.length; j++) {
+        let roomId = conferences[i].roomId;
+        if (participants[j].participantId === socket.id) {
+          participants.splice(j, 1);
+          console.log(roomId);
+          await viewObject(confObjPath, conferences[i]);
+          socket.to(roomId).emit("participantLeft", {
+            participantId: socket.id,
+          });
+        }
+      }
+    }
+  });
   // join room;
   socket.on(
     "joinConferenceRoom",
@@ -165,6 +181,30 @@ io.on("connection", async (socket) => {
     "createRcvTransport",
     createRcvTransport(conferences, findRoom, findParticipant)
   );
+
+  socket.on("deleteRcvTransport", async (data) => {
+    const { accessKey, userName, socketId, participantId } = data;
+    const conference = findRoom(conferences, accessKey);
+    const participant = findParticipant(
+      conference.participants,
+      socketId,
+      userName
+    );
+
+    if (participant) {
+      const consumers = participant.consumers;
+      const keys = Object.keys(consumers);
+      for (let i = 0; i < keys.length; i++) {
+        let consumerList = consumers[keys[i]];
+        for (let j = 0; j < consumerList.length; j++) {
+          if (consumerList[j].fromId === participantId) {
+            consumerList.splice(j, 1);
+          }
+        }
+      }
+      await viewObject(confObjPath, conference);
+    }
+  });
 
   // rcv connect
   socket.on(
