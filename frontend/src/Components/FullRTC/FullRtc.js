@@ -35,7 +35,12 @@ const FullRtc = () => {
   const [consumeVideoState, setConsumeVideoState] = useState("");
   const [consumeAudioState, setConsumeAudioState] = useState("");
   const [consumeScreenState, setConsumeScreenState] = useState("");
+  const [isStreamingVideo, setIsStreamingVideo] = useState(false);
+  const [isStreamingAudio, setIsStreamingAudio] = useState(false);
+  const [isStreamingScreen, setIsStreamingScreen] = useState(false);
   const [socketId, setSocketId] = useState(null);
+  const [mediaEls, setMediaEls] = useState([]);
+  const [playMedia, setPlayMedia] = useState("");
   const router = useRouter();
   const confState = useContext(conferenceContext);
 
@@ -46,6 +51,8 @@ const FullRtc = () => {
     setProducerDevices,
     producerTransports,
     setProducerTransports,
+    remoteMediaStreamId,
+    setRemoteMediaStreamId,
   } = confState.mediaSoup;
 
   useEffect(() => {
@@ -168,25 +175,47 @@ const FullRtc = () => {
   const produceVideoStream = async () => {
     if (navigator?.mediaDevices) {
       try {
-        const videoStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
-        // TODO: add local stream to local video object:
-        console.log(videoStream);
-        // TODO: produce track from stream over media soup:
-        videoStream.getTracks().forEach((track) => {
-          if (track.kind === "video") {
-            const vidParams = {
-              track: track,
-              ...videoParams,
-            };
-            // TODO: store producer and and track state
-            producerTransports.videoProducerTransport.produce(vidParams);
+        if (isStreamingVideo === false) {
+          const mediaDevices = await navigator.mediaDevices.enumerateDevices();
+          let selectedVideoDevice;
 
-            // TODO: after producing stream, emit to server to return list of existing producers on the current router
-          }
-        });
+          mediaDevices.forEach((device, i) => {
+            if (device.kind === "videoinput") {
+              selectedVideoDevice = device;
+              return;
+            }
+          });
+
+          const videoStream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: selectedVideoDevice.deviceId },
+            audio: false,
+          });
+          // TODO: add local stream to local video object:
+          console.log(videoStream);
+
+          videoStream.getTracks().forEach((track) => {
+            if (track.kind === "video") {
+              const videoConstraints = track.getCapabilities();
+
+              const height = videoConstraints.height.max * 0.8;
+              const width = videoConstraints.width.max * 0.8;
+
+              track.applyConstraints({
+                height,
+                width,
+              });
+              const vidParams = {
+                track: track,
+                ...videoParams,
+              };
+              // TODO: store producer and and track state
+              producerTransports.videoProducerTransport.produce(vidParams);
+            }
+          });
+          setIsStreamingVideo(true);
+        } else {
+          alert("already streaming video");
+        }
       } catch (err) {}
     }
   };
@@ -194,24 +223,37 @@ const FullRtc = () => {
   const produceAudioStream = async () => {
     if (navigator?.mediaDevices) {
       try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({
-          video: false,
-          audio: true,
-        });
-        // TODO: add local stream to local video object:
-        console.log(audioStream);
-        // TODO: produce track from stream over media soup:
-        audioStream.getTracks().forEach((track) => {
-          if (track.kind === "audio") {
-            const audParams = {
-              track: track,
-              ...audioParams,
-            };
-            // TODO: store producer and and track state
-            producerTransports.audioProducerTransport.produce(audParams);
-            // TODO: after producing stream, emit to server to return list of existing producers on the current router
-          }
-        });
+        if (isStreamingAudio === false) {
+          const mediaDevices = await navigator.mediaDevices.enumerateDevices();
+          let selectedAudioDevice;
+
+          mediaDevices.forEach((device, i) => {
+            if (device.kind === "audioinput") {
+              selectedAudioDevice = device;
+              return;
+            }
+          });
+
+          const audioStream = await navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: { deviceId: selectedAudioDevice.deviceId },
+          });
+          // TODO: add local stream to local video object:
+          console.log(audioStream);
+          audioStream.getTracks().forEach((track) => {
+            if (track.kind === "audio") {
+              const audParams = {
+                track: track,
+                ...audioParams,
+              };
+              // TODO: store producer and and track state
+              producerTransports.audioProducerTransport.produce(audParams);
+            }
+          });
+          setIsStreamingAudio(true);
+        } else {
+          alert("already streaming audio");
+        }
       } catch (err) {}
     }
   };
@@ -219,20 +261,33 @@ const FullRtc = () => {
   const produceScreenStream = async () => {
     if (navigator?.mediaDevices) {
       try {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia();
-        // TODO: add local stream to local video object:
-        console.log(screenStream);
-        // TODO: produce track from stream over media soup:
-        screenStream.getTracks().forEach((track) => {
-          if (track.kind === "video") {
-            const screenParams = {
-              track: track,
-              ...videoParams,
-            };
-            // TODO: store producer and and track state
-            producerTransports.screenProducerTransport.produce(screenParams);
-          }
-        });
+        if (isStreamingScreen === false) {
+          const screenStream = await navigator.mediaDevices.getDisplayMedia();
+          // TODO: add local stream to local video object:
+          console.log(screenStream);
+          screenStream.getTracks().forEach((track) => {
+            if (track.kind === "video") {
+              const videoConstraints = track.getCapabilities();
+
+              const height = videoConstraints.height.max * 0.8;
+              const width = videoConstraints.width.max * 0.8;
+
+              track.applyConstraints({
+                height,
+                width,
+              });
+              const screenParams = {
+                track: track,
+                ...videoParams,
+              };
+              // TODO: store producer and and track state
+              producerTransports.screenProducerTransport.produce(screenParams);
+            }
+          });
+          setIsStreamingScreen(true);
+        } else {
+          alert("already streaming screen");
+        }
       } catch (err) {}
     }
   };
@@ -268,7 +323,9 @@ const FullRtc = () => {
       userName,
       socketId,
       socket,
-      Device
+      Device,
+      remoteMediaStreamId,
+      setRemoteMediaStreamId
     );
   }, [consumeVideoState]);
 
@@ -287,7 +344,9 @@ const FullRtc = () => {
       userName,
       socketId,
       socket,
-      Device
+      Device,
+      remoteMediaStreamId,
+      setRemoteMediaStreamId
     );
   }, [consumeAudioState]);
 
@@ -309,14 +368,112 @@ const FullRtc = () => {
     );
   }, [consumeScreenState]);
 
+  // add stream to hmtl;
+  useEffect(() => {
+    if (remoteMediaStreamId.length > 0) {
+      const info = remoteMediaStreamId.split("&");
+      const fromId = info[0];
+      const producerId = info[1];
+      const type = info[2];
+      if (fromId && producerId && type) {
+        console.log(fromId, producerId);
+        console.log(remoteVideoProducers[fromId]);
+        console.log(remoteAudioProducers[fromId]);
+
+        let mediaElem = (
+          <div className="remoteVideo" key={fromId}>
+            <video
+              className="VideoElem"
+              id={`${fromId}-video`}
+              autoPlay
+              playsInline
+              controls
+            ></video>{" "}
+            <audio
+              className="VideoElem"
+              id={`${fromId}-audio`}
+              autoPlay
+              playsInline
+            ></audio>
+          </div>
+        );
+
+        socket.emit("consumerResume", {
+          fromId,
+          type,
+          accessKey,
+          socketId,
+          userName,
+        });
+
+        if (mediaEls.length < 1) {
+          const els = [
+            ...mediaEls,
+            { from: fromId, component: mediaElem, type },
+          ];
+          setMediaEls(els);
+          setPlayMedia(`${fromId}&${type}`);
+        }
+        if (mediaEls.length >= 1) {
+          let hasEl;
+          for (let i = 0; i < mediaEls.length; i++) {
+            if (mediaEls[i].from === fromId) {
+              hasEl = true;
+              mediaEls[i].type = type;
+              setMediaEls([...mediaEls]);
+              setPlayMedia(`${fromId}&${type}`);
+            }
+          }
+          if (!hasEl) {
+            const els = [
+              ...mediaEls,
+              { from: fromId, component: mediaElem, type },
+            ];
+            setMediaEls(els);
+            setPlayMedia(`${fromId}&${type}`);
+          }
+        }
+      }
+    }
+  }, [remoteMediaStreamId]);
+
+  const mediaElemList = mediaEls.map((el, i) => {
+    return el.component;
+  });
+
+  useEffect(() => {
+    if (playMedia.length > 0) {
+      console.log(playMedia);
+      const fromId = playMedia.split("&")[0];
+      const type = playMedia.split("&")[1];
+
+      if (type === "video") {
+        const vidEl = document.getElementById(`${fromId}-video`);
+        const track = remoteVideoProducers[fromId]?.videoStreamObject?.track;
+        if (track) {
+          const videoFeed = new MediaStream([track]);
+          vidEl.srcObject = videoFeed;
+          console.log(vidEl.srcObject);
+        }
+      }
+      if (type === "audio") {
+        const audEl = document.getElementById(`${fromId}-audio`);
+        const track = remoteAudioProducers[fromId]?.audioStreamObject?.track;
+        if (track) {
+          const audioFeed = new MediaStream([track]);
+          audEl.srcObject = audioFeed;
+          console.log(audEl.srcObject);
+        }
+      }
+    }
+  }, [playMedia]);
+
   return (
     <main className="containerr m-0 p-0">
       <div className="mediaWrap m-0 p-0">
         <div className="videoMediaWrap">
-          <div className="remoteVideos">
-            <div className="remoteVideo"></div>
-          </div>
           <div className="localVideo"></div>
+          <div className="remoteVideos">{mediaElemList}</div>
         </div>
         <div className="screenMediaWrap">
           <div className="remoteScreens">

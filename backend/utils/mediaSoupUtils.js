@@ -1,7 +1,12 @@
 const mediaSoup = require("mediasoup");
 const fs = require("node:fs/promises");
 
-const { videoCodec, audioCodec, webRtcTransport_options } = require("./config");
+const {
+  videoCodec,
+  audioCodec,
+  screenCodec,
+  webRtcTransport_options,
+} = require("./config");
 
 const findRoom = (conferences, accessKey) => {
   for (let i = 0; i < conferences.length; i++) {
@@ -39,7 +44,7 @@ const createRoomRouters = async (worker) => {
       mediaCodecs: [videoCodec],
     });
     let screenRouter = await worker.createRouter({
-      mediaCodecs: [videoCodec],
+      mediaCodecs: [screenCodec],
     });
     let audioRouter = await worker.createRouter({
       mediaCodecs: [audioCodec],

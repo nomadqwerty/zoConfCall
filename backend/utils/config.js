@@ -7,7 +7,16 @@ let audioCodec = {
 
 let videoCodec = {
   kind: "video",
-  mimeType: "video/VP8",
+  mimeType: "video/h264",
+  clockRate: 90000,
+  parameters: {
+    "x-google-start-bitrate": 1000,
+  },
+};
+
+let screenCodec = {
+  kind: "video",
+  mimeType: "video/vp8",
   clockRate: 90000,
   parameters: {
     "x-google-start-bitrate": 1000,
@@ -26,4 +35,9 @@ const webRtcTransport_options = {
   preferUdp: true,
 };
 
-module.exports = { videoCodec, audioCodec, webRtcTransport_options };
+module.exports = {
+  videoCodec,
+  audioCodec,
+  screenCodec,
+  webRtcTransport_options,
+};

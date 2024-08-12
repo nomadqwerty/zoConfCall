@@ -129,7 +129,9 @@ const onConsumeState = (
   userName,
   socketId,
   socket,
-  Device
+  Device,
+  remoteMediaStreams,
+  setRemoteMediaStreamId
 ) => {
   let type;
   if (isVideo) {
@@ -177,7 +179,7 @@ const onConsumeState = (
                 "created remote consumer tp for: ",
                 remoteProducer.from
               );
-              console.log(remoteProducer);
+              // console.log(remoteProducer);
               remoteProducer.consumerTransport.on(
                 "connect",
                 async ({ dtlsParameters }, callback, errback) => {
@@ -229,7 +231,19 @@ const onConsumeState = (
                         rtpParameters: params.rtpParameters,
                       });
 
-                    console.log(consumerData);
+                    if (remoteProducer.kind === "video" && type === "video") {
+                      remoteProducer.videoStreamObject = consumerData;
+                      setRemoteMediaStreamId(
+                        `${remoteProducer.from}&${remoteProducer.producerId}&${type}`
+                      );
+                    }
+                    if (remoteProducer.kind === "audio" && type === "audio") {
+                      remoteProducer.audioStreamObject = consumerData;
+                      setRemoteMediaStreamId(
+                        `${remoteProducer.from}&${remoteProducer.producerId}&${type}`
+                      );
+                    }
+                    // console.log(remoteMediaStreams);
                   }
                 }
               );

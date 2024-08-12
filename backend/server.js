@@ -213,6 +213,30 @@ io.on("connection", async (socket) => {
   );
   // rcv consume
   socket.on("consume", onConsume(conferences, findRoom, findParticipant));
+
+  // resume consume;
+  socket.on("consumerResume", async (data) => {
+    const { fromId, type, accessKey, socketId, userName } = data;
+    console.log("resume consumer for", fromId, type);
+    const conference = findRoom(conferences, accessKey);
+    if (conference) {
+      const participant = findParticipant(
+        conference.participants,
+        socketId,
+        userName
+      );
+
+      if (participant && type) {
+        const consumerList = participant.consumers[type];
+
+        for (let i = 0; i < consumerList.length; i++) {
+          const consumer = consumerList[i].consumer;
+          await consumer.resume();
+          console.log("resumed ", type, " stream for: ", fromId);
+        }
+      }
+    }
+  });
 });
 
 // io.compress(true);
