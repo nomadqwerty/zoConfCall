@@ -11,7 +11,8 @@ const ConferenceProvider = ({ children }) => {
   const [remoteVideoProducers, setRemoteVideoProducers] = useState({});
   const [remoteAudioProducers, setRemoteAudioProducers] = useState({});
   const [remoteScreenProducers, setRemoteScreenProducers] = useState({});
-  const [remoteMediaStreamId, setRemoteMediaStreamId] = useState("");
+  const [remoteVideoStream, setRemoteVideoStream] = useState([]);
+  const [remoteAudioStream, setRemoteAudioStream] = useState([]);
 
   let state = {
     mediaSoup: {
@@ -27,8 +28,10 @@ const ConferenceProvider = ({ children }) => {
       setRemoteAudioProducers,
       remoteScreenProducers,
       setRemoteScreenProducers,
-      remoteMediaStreamId,
-      setRemoteMediaStreamId,
+      remoteVideoStream,
+      setRemoteVideoStream,
+      remoteAudioStream,
+      setRemoteAudioStream,
     },
   };
 

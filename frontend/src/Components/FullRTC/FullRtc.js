@@ -39,9 +39,9 @@ const FullRtc = () => {
   const [isStreamingAudio, setIsStreamingAudio] = useState(false);
   const [isStreamingScreen, setIsStreamingScreen] = useState(false);
   const [socketId, setSocketId] = useState(null);
-  const [mediaEls, setMediaEls] = useState([]);
-  const [playMedia, setPlayMedia] = useState("");
-  const [removeMedia, setRemoveMedia] = useState("");
+  const [videoEls, setVideoEls] = useState([]);
+  const [audioEls, setAudioEls] = useState([]);
+
   const router = useRouter();
   const confState = useContext(conferenceContext);
 
@@ -52,8 +52,10 @@ const FullRtc = () => {
     setProducerDevices,
     producerTransports,
     setProducerTransports,
-    remoteMediaStreamId,
-    setRemoteMediaStreamId,
+    remoteVideoStream,
+    setRemoteVideoStream,
+    remoteAudioStream,
+    setRemoteAudioStream,
   } = confState.mediaSoup;
 
   useEffect(() => {
@@ -180,7 +182,6 @@ const FullRtc = () => {
         console.log(videoEl);
         console.log(audioEl);
 
-        setRemoveMedia(data.participantId);
         if (
           remoteVideoProducers[data.participantId] ||
           remoteAudioProducers[data.participantId] ||
@@ -356,6 +357,7 @@ const FullRtc = () => {
     const isAudio = false;
     const isScreen = false;
     console.log(remoteVideoProducers);
+
     onConsumeState(
       consumeVideoState,
       remoteVideoProducers,
@@ -367,8 +369,8 @@ const FullRtc = () => {
       socketId,
       socket,
       Device,
-      remoteMediaStreamId,
-      setRemoteMediaStreamId
+      remoteVideoStream,
+      setRemoteVideoStream
     );
   }, [consumeVideoState]);
 
@@ -388,8 +390,8 @@ const FullRtc = () => {
       socketId,
       socket,
       Device,
-      remoteMediaStreamId,
-      setRemoteMediaStreamId
+      remoteAudioStream,
+      setRemoteAudioStream
     );
   }, [consumeAudioState]);
 
@@ -412,118 +414,65 @@ const FullRtc = () => {
   }, [consumeScreenState]);
 
   // add stream to hmtl;
+
   useEffect(() => {
-    if (remoteMediaStreamId.length > 0) {
-      const info = remoteMediaStreamId.split("&");
-      const fromId = info[0];
-      const producerId = info[1];
-      const type = info[2];
-      if (fromId && producerId && type) {
-        console.log(fromId, producerId);
-        console.log(remoteVideoProducers[fromId]);
-        console.log(remoteAudioProducers[fromId]);
+    if (remoteVideoStream.length > 0) {
+      console.log(remoteVideoStream);
 
-        let mediaElem = (
-          <div className="remoteVideo" key={fromId}>
-            <video
-              className="VideoElem"
-              id={`${fromId}-video`}
-              autoPlay
-              playsInline
-            ></video>{" "}
-            <audio
-              className="VideoElem"
-              id={`${fromId}-audio`}
-              autoPlay
-              playsInline
-            ></audio>
-          </div>
-        );
+      setVideoEls([...remoteVideoStream]);
+    }
+  }, [remoteVideoStream]);
 
-        socket.emit("consumerResume", {
-          fromId,
-          type,
-          accessKey,
-          socketId,
-          userName,
-        });
+  useEffect(() => {
+    if (remoteAudioStream.length > 0) {
+      console.log(remoteAudioStream);
 
-        if (mediaEls.length < 1) {
-          const els = [
-            ...mediaEls,
-            { from: fromId, component: mediaElem, type },
-          ];
-          setMediaEls(els);
-          setPlayMedia(`${fromId}&${type}`);
-        }
-        if (mediaEls.length >= 1) {
-          let hasEl;
-          for (let i = 0; i < mediaEls.length; i++) {
-            if (mediaEls[i].from === fromId) {
-              hasEl = true;
-              mediaEls[i].type = type;
-              setMediaEls([...mediaEls]);
-              setPlayMedia(`${fromId}&${type}`);
-            }
-          }
-          if (!hasEl) {
-            const els = [
-              ...mediaEls,
-              { from: fromId, component: mediaElem, type },
-            ];
-            setMediaEls(els);
-            setPlayMedia(`${fromId}&${type}`);
-          }
+      setAudioEls([...remoteAudioStream]);
+    }
+  }, [remoteAudioStream]);
+
+  useEffect(() => {
+    if (videoEls.length > 0) {
+      console.log(videoEls);
+      for (let i = 0; i < videoEls.length; i++) {
+        if (!videoEls[i]?.isLoaded) {
+          const videoEl = document.getElementById(
+            `${videoEls[i].fromId}-video`
+          );
+          console.log(`${videoEls[i].fromId}-video`);
+          const videoFeed = new MediaStream([videoEls[i].track]);
+
+          videoEl.srcObject = videoFeed;
+          videoEls[i].isLoaded = true;
         }
       }
     }
-  }, [remoteMediaStreamId]);
+  }, [videoEls]);
 
-  const mediaElemList = mediaEls.map((el, i) => {
-    return el.component;
+  useEffect(() => {
+    if (audioEls.length > 0) {
+      console.log(audioEls);
+      for (let i = 0; i < audioEls.length; i++) {
+        if (!audioEls[i]?.isLoaded) {
+          const audioEl = document.getElementById(
+            `${audioEls[i].fromId}-audio`
+          );
+          console.log(`${audioEls[i].fromId}-audio`);
+          const audioFeed = new MediaStream([audioEls[i].track]);
+
+          audioEl.srcObject = audioFeed;
+          audioEls[i].isLoaded = true;
+        }
+      }
+    }
+  }, [audioEls]);
+
+  const videoList = remoteVideoStream.map((vid, i) => {
+    return vid.component;
   });
-
-  useEffect(() => {
-    if (playMedia.length > 0) {
-      console.log(playMedia);
-      const fromId = playMedia.split("&")[0];
-      const type = playMedia.split("&")[1];
-
-      if (type === "video") {
-        const vidEl = document.getElementById(`${fromId}-video`);
-        const track = remoteVideoProducers[fromId]?.videoStreamObject?.track;
-
-        if (track) {
-          const videoFeed = new MediaStream([track]);
-          vidEl.srcObject = videoFeed;
-          console.log(vidEl.srcObject);
-        }
-      }
-      if (type === "audio") {
-        const audEl = document.getElementById(`${fromId}-audio`);
-        const track = remoteAudioProducers[fromId]?.audioStreamObject?.track;
-        if (track) {
-          const audioFeed = new MediaStream([track]);
-          audEl.srcObject = audioFeed;
-          console.log(audEl.srcObject);
-        }
-      }
-    }
-  }, [playMedia]);
-
-  useEffect(() => {
-    if (removeMedia.length > 0) {
-      console.log(mediaEls);
-      for (let i = 0; i < mediaEls.length; i++) {
-        if (mediaEls[i].from === removeMedia) {
-          console.log(mediaEls[i]);
-          mediaEls.splice(i, 1);
-
-          setMediaEls([...mediaEls]);
-        }
-      }
-    }
-  }, [removeMedia]);
+  const audioList = remoteAudioStream.map((aud, i) => {
+    return aud.component;
+  });
 
   return (
     <main className="containerr m-0 p-0">
@@ -544,7 +493,8 @@ const FullRtc = () => {
               muted={true}
             ></audio>
           </div>
-          <div className="remoteVideos">{mediaElemList}</div>
+          <div className="remoteVideos">{videoList}</div>
+          <div className="remoteAudios">{audioList}</div>
         </div>
         <div className="screenMediaWrap">
           <div className="remoteScreens">

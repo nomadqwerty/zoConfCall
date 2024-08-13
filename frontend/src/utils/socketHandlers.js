@@ -130,8 +130,8 @@ const onConsumeState = (
   socketId,
   socket,
   Device,
-  remoteMediaStreams,
-  setRemoteMediaStreamId
+  remoteStreams,
+  setRemoteStream
 ) => {
   let type;
   if (isVideo) {
@@ -232,16 +232,69 @@ const onConsumeState = (
                       });
 
                     if (remoteProducer.kind === "video" && type === "video") {
-                      remoteProducer.videoStreamObject = consumerData;
-                      setRemoteMediaStreamId(
-                        `${remoteProducer.from}&${remoteProducer.producerId}&${type}`
+                      const videoEl = (
+                        <video
+                          className="VideoElem"
+                          id={`${remoteProducer.from}-video`}
+                          key={remoteProducer.from}
+                          autoPlay
+                          playsInline
+                        ></video>
                       );
+
+                      remoteProducer.videoStreamObject = consumerData;
+                      socket.emit("consumerResume", {
+                        fromId: remoteProducer.from,
+                        type,
+                        accessKey,
+                        socketId,
+                        userName,
+                      });
+                      const newStream = {
+                        fromId: remoteProducer.from,
+                        type,
+                        track: remoteProducer.videoStreamObject.track,
+                        component: videoEl,
+                      };
+
+                      const oldStreams = remoteStreams;
+                      oldStreams.push(newStream);
+
+                      const overWrite = [...oldStreams];
+
+                      setRemoteStream(overWrite);
                     }
                     if (remoteProducer.kind === "audio" && type === "audio") {
-                      remoteProducer.audioStreamObject = consumerData;
-                      setRemoteMediaStreamId(
-                        `${remoteProducer.from}&${remoteProducer.producerId}&${type}`
+                      const audioEl = (
+                        <audio
+                          className="audioElem"
+                          id={`${remoteProducer.from}-audio`}
+                          key={remoteProducer.from}
+                          autoPlay
+                          playsInline
+                        ></audio>
                       );
+                      remoteProducer.audioStreamObject = consumerData;
+                      socket.emit("consumerResume", {
+                        fromId: remoteProducer.from,
+                        type,
+                        accessKey,
+                        socketId,
+                        userName,
+                      });
+                      const newStream = {
+                        fromId: remoteProducer.from,
+                        type,
+                        track: remoteProducer.audioStreamObject.track,
+                        component: audioEl,
+                      };
+
+                      const oldStreams = remoteStreams;
+                      oldStreams.push(newStream);
+
+                      const overWrite = [...oldStreams];
+
+                      setRemoteStream(overWrite);
                     }
                     // console.log(remoteMediaStreams);
                   }
