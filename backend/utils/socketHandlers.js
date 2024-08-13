@@ -49,25 +49,29 @@ const onJoinRoom = (
       };
 
       // 3: add participant to conference:
-      existingConference.participants.push(newParticipant);
+      if (existingConference.participants.length <= 5) {
+        existingConference.participants.push(newParticipant);
 
-      await viewObject(confObjPath, existingConference);
-      // 4: add participant to room based on accessKey.
-      socket.join(accessKey);
+        await viewObject(confObjPath, existingConference);
+        // 4: add participant to room based on accessKey.
+        socket.join(accessKey);
 
-      // 5: return room routers rtp capabilities and tell new participant to start producing;
-      const rtpCapabilities = {};
+        // 5: return room routers rtp capabilities and tell new participant to start producing;
+        const rtpCapabilities = {};
 
-      rtpCapabilities.videoRtpCapabilities =
-        existingConference.routers.videoRouter.rtpCapabilities;
+        rtpCapabilities.videoRtpCapabilities =
+          existingConference.routers.videoRouter.rtpCapabilities;
 
-      rtpCapabilities.screenRtpCapabilities =
-        existingConference.routers.screenRouter.rtpCapabilities;
+        rtpCapabilities.screenRtpCapabilities =
+          existingConference.routers.screenRouter.rtpCapabilities;
 
-      rtpCapabilities.audioRtpCapabilities =
-        existingConference.routers.audioRouter.rtpCapabilities;
+        rtpCapabilities.audioRtpCapabilities =
+          existingConference.routers.audioRouter.rtpCapabilities;
 
-      callback(rtpCapabilities);
+        callback(rtpCapabilities);
+      } else {
+        console.log("participant count exeeded");
+      }
     } else {
       // TODO: create conference and add participant to conference room;
       // 1: create room.

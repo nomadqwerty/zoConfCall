@@ -41,6 +41,7 @@ const FullRtc = () => {
   const [socketId, setSocketId] = useState(null);
   const [mediaEls, setMediaEls] = useState([]);
   const [playMedia, setPlayMedia] = useState("");
+  const [removeMedia, setRemoveMedia] = useState("");
   const router = useRouter();
   const confState = useContext(conferenceContext);
 
@@ -56,8 +57,30 @@ const FullRtc = () => {
   } = confState.mediaSoup;
 
   useEffect(() => {
-    setSocketId(socketObj.id);
-    setSocket(socketObj);
+    if (navigator.mediaDevices) {
+      navigator.mediaDevices
+        .getUserMedia({ audio: true, video: true })
+        .then((res) => {
+          console.log(res);
+          res.getTracks().forEach((track) => {
+            if (track.kind === "video") {
+              const videoEl = document.getElementById("local-video");
+              const newVideoStream = new MediaStream([track]);
+              videoEl.srcObject = newVideoStream;
+            }
+            if (track.kind === "audio") {
+              const audioEl = document.getElementById("local-audio");
+              const newAudioStream = new MediaStream([track]);
+              audioEl.srcObject = newAudioStream;
+            }
+          });
+          setSocketId(socketObj.id);
+          setSocket(socketObj);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    }
   }, []);
   useEffect(() => {
     if (socket && confState) {
@@ -144,6 +167,20 @@ const FullRtc = () => {
 
       socket.on("participantLeft", (data) => {
         console.log("participantLeft id: ", data.participantId);
+        const videoEl = document.getElementById(`${data.participantId}-video`);
+        const audioEl = document.getElementById(`${data.participantId}-audio`);
+
+        if (videoEl) {
+          videoEl.style.display = "none";
+        }
+        if (audioEl) {
+          audioEl.style.display = "none";
+        }
+
+        console.log(videoEl);
+        console.log(audioEl);
+
+        setRemoveMedia(data.participantId);
         if (
           remoteVideoProducers[data.participantId] ||
           remoteAudioProducers[data.participantId] ||
@@ -210,6 +247,9 @@ const FullRtc = () => {
               };
               // TODO: store producer and and track state
               producerTransports.videoProducerTransport.produce(vidParams);
+              const videoEl = document.getElementById("local-video");
+              const newVideoStream = new MediaStream([track]);
+              videoEl.srcObject = newVideoStream;
             }
           });
           setIsStreamingVideo(true);
@@ -248,6 +288,9 @@ const FullRtc = () => {
               };
               // TODO: store producer and and track state
               producerTransports.audioProducerTransport.produce(audParams);
+              const audioEl = document.getElementById("local-audio");
+              const newAudioStream = new MediaStream([track]);
+              audioEl.srcObject = newAudioStream;
             }
           });
           setIsStreamingAudio(true);
@@ -387,7 +430,6 @@ const FullRtc = () => {
               id={`${fromId}-video`}
               autoPlay
               playsInline
-              controls
             ></video>{" "}
             <audio
               className="VideoElem"
@@ -450,6 +492,7 @@ const FullRtc = () => {
       if (type === "video") {
         const vidEl = document.getElementById(`${fromId}-video`);
         const track = remoteVideoProducers[fromId]?.videoStreamObject?.track;
+
         if (track) {
           const videoFeed = new MediaStream([track]);
           vidEl.srcObject = videoFeed;
@@ -468,11 +511,39 @@ const FullRtc = () => {
     }
   }, [playMedia]);
 
+  useEffect(() => {
+    if (removeMedia.length > 0) {
+      console.log(mediaEls);
+      for (let i = 0; i < mediaEls.length; i++) {
+        if (mediaEls[i].from === removeMedia) {
+          console.log(mediaEls[i]);
+          mediaEls.splice(i, 1);
+
+          setMediaEls([...mediaEls]);
+        }
+      }
+    }
+  }, [removeMedia]);
+
   return (
     <main className="containerr m-0 p-0">
       <div className="mediaWrap m-0 p-0">
         <div className="videoMediaWrap">
-          <div className="localVideo"></div>
+          <div className="localVideo">
+            <video
+              className="VideoElem"
+              id={`local-video`}
+              autoPlay
+              playsInline
+            ></video>{" "}
+            <audio
+              className="VideoElem"
+              id={`local-audio`}
+              autoPlay
+              playsInline
+              muted={true}
+            ></audio>
+          </div>
           <div className="remoteVideos">{mediaElemList}</div>
         </div>
         <div className="screenMediaWrap">
