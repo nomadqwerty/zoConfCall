@@ -237,6 +237,30 @@ io.on("connection", async (socket) => {
       }
     }
   });
+
+  socket.on("stoppedScreenShare", (data) => {
+    const { accessKey, userName, socketId } = data;
+
+    const conference = findRoom(conferences, accessKey);
+    if (conference) {
+      let roomId = conference.roomId;
+      const participants = conference.participants;
+      for (let i = 0; i < participants.length; i++) {
+        const screens = participants[i].consumers.screen;
+
+        for (let j = 0; j < screens.length; j++) {
+          if (screens[j].fromId === socketId) {
+            screens.splice(j, 1);
+          }
+        }
+      }
+
+      socket.to(roomId).emit("stopScreenConsumer", {
+        participantName: userName,
+        participantId: socketId,
+      });
+    }
+  });
 });
 
 // io.compress(true);

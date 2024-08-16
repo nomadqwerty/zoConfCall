@@ -41,6 +41,8 @@ const FullRtc = () => {
   const [socketId, setSocketId] = useState(null);
   const [videoEls, setVideoEls] = useState([]);
   const [audioEls, setAudioEls] = useState([]);
+  const [screenEls, setScreenEls] = useState([]);
+  const [screenReset, setScreenReset] = useState([]);
 
   const router = useRouter();
   const confState = useContext(conferenceContext);
@@ -56,6 +58,8 @@ const FullRtc = () => {
     setRemoteVideoStream,
     remoteAudioStream,
     setRemoteAudioStream,
+    remoteScreenStream,
+    setRemoteScreenStream,
   } = confState.mediaSoup;
 
   useEffect(() => {
@@ -167,10 +171,29 @@ const FullRtc = () => {
         )
       );
 
+      socket.on("stopScreenConsumer", (data) => {
+        console.log("stopped sharing screen for id: ", data.participantId);
+        const screenEl = document.getElementById(
+          `${data.participantId}-screen`
+        );
+        if (screenEl) {
+          screenEl.style.display = "none";
+        }
+        console.log(screenEl);
+        if (remoteScreenProducers[data.participantId]) {
+          setConsumeScreenState("");
+          setScreenReset(data.participantId);
+          delete remoteScreenProducers[data.participantId];
+        }
+      });
+
       socket.on("participantLeft", (data) => {
         console.log("participantLeft id: ", data.participantId);
         const videoEl = document.getElementById(`${data.participantId}-video`);
         const audioEl = document.getElementById(`${data.participantId}-audio`);
+        const screenEl = document.getElementById(
+          `${data.participantId}-screen`
+        );
 
         if (videoEl) {
           videoEl.style.display = "none";
@@ -178,9 +201,13 @@ const FullRtc = () => {
         if (audioEl) {
           audioEl.style.display = "none";
         }
+        if (screenEl) {
+          screenEl.style.display = "none";
+        }
 
         console.log(videoEl);
         console.log(audioEl);
+        console.log(screenEl);
 
         if (
           remoteVideoProducers[data.participantId] ||
@@ -265,6 +292,9 @@ const FullRtc = () => {
     if (navigator?.mediaDevices) {
       try {
         if (isStreamingAudio === false) {
+          const { noiseSuppression } =
+            navigator.mediaDevices.getSupportedConstraints();
+          console.log(noiseSuppression);
           const mediaDevices = await navigator.mediaDevices.enumerateDevices();
           let selectedAudioDevice;
 
@@ -283,6 +313,9 @@ const FullRtc = () => {
           console.log(audioStream);
           audioStream.getTracks().forEach((track) => {
             if (track.kind === "audio") {
+              track.applyConstraints({
+                noiseSuppression,
+              });
               const audParams = {
                 track: track,
                 ...audioParams,
@@ -303,9 +336,13 @@ const FullRtc = () => {
   };
 
   const produceScreenStream = async () => {
+    setScreenReset("");
     if (navigator?.mediaDevices) {
       try {
-        if (isStreamingScreen === false) {
+        if (
+          isStreamingScreen === false &&
+          (isStreamingAudio === true || isStreamingVideo === true)
+        ) {
           const screenStream = await navigator.mediaDevices.getDisplayMedia();
           // TODO: add local stream to local video object:
           console.log(screenStream);
@@ -320,6 +357,16 @@ const FullRtc = () => {
                 height,
                 width,
               });
+
+              track.onended = () => {
+                console.log("stopped sharing");
+                setIsStreamingScreen(false);
+                socket.emit("stoppedScreenShare", {
+                  accessKey,
+                  userName,
+                  socketId,
+                });
+              };
               const screenParams = {
                 track: track,
                 ...videoParams,
@@ -330,7 +377,15 @@ const FullRtc = () => {
           });
           setIsStreamingScreen(true);
         } else {
-          alert("already streaming screen");
+          if (
+            isStreamingScreen === false &&
+            isStreamingAudio === false &&
+            isStreamingVideo === false
+          ) {
+            alert("to share screen, stream either video or audio");
+          } else if (isStreamingScreen === true) {
+            alert("already sharing screen");
+          }
         }
       } catch (err) {}
     }
@@ -396,9 +451,11 @@ const FullRtc = () => {
   }, [consumeAudioState]);
 
   useEffect(() => {
+    console.log(consumeScreenState);
     const isVideo = false;
     const isAudio = false;
     const isScreen = true;
+    setScreenReset("");
     onConsumeState(
       consumeScreenState,
       remoteScreenProducers,
@@ -409,7 +466,9 @@ const FullRtc = () => {
       userName,
       socketId,
       socket,
-      Device
+      Device,
+      remoteScreenStream,
+      setRemoteScreenStream
     );
   }, [consumeScreenState]);
 
@@ -430,6 +489,14 @@ const FullRtc = () => {
       setAudioEls([...remoteAudioStream]);
     }
   }, [remoteAudioStream]);
+
+  useEffect(() => {
+    if (remoteScreenStream.length > 0) {
+      console.log(remoteScreenStream);
+
+      setScreenEls([...remoteScreenStream]);
+    }
+  }, [remoteScreenStream]);
 
   useEffect(() => {
     if (videoEls.length > 0) {
@@ -467,11 +534,63 @@ const FullRtc = () => {
     }
   }, [audioEls]);
 
+  useEffect(() => {
+    if (screenEls.length > 0) {
+      console.log(screenEls);
+      for (let i = 0; i < screenEls.length; i++) {
+        if (!screenEls[i]?.isLoaded) {
+          const screenEl = document.getElementById(
+            `${screenEls[i].fromId}-screen`
+          );
+
+          screenEl.style.display = "block";
+
+          console.log(`${screenEls[i].fromId}-screen`);
+          const videoFeed = new MediaStream([screenEls[i].track]);
+
+          screenEl.srcObject = videoFeed;
+          screenEls[i].isLoaded = true;
+        }
+      }
+    }
+  }, [screenEls]);
+
+  useEffect(() => {
+    if (screenReset.length > 0) {
+      console.log(screenEls);
+      let idx;
+      for (let i = 0; i < screenEls.length; i++) {
+        console.log(screenEls[i], screenReset);
+        if (screenEls[i].fromId === screenReset) {
+          idx = i;
+        }
+      }
+
+      if (idx) {
+        screenEls.splice(idx, 1);
+        console.log(screenEls, idx);
+        setRemoteScreenStream([...screenEls]);
+        setScreenEls([...screenEls]);
+      }
+    }
+  }, [screenReset]);
+
   const videoList = remoteVideoStream.map((vid, i) => {
     return vid.component;
   });
   const audioList = remoteAudioStream.map((aud, i) => {
     return aud.component;
+  });
+  let showing = {};
+  const screenList = remoteScreenStream.map((screen, i) => {
+    console.log(screen);
+    if (!showing[screen.fromId]) {
+      showing[screen.fromId] = screen;
+      return screen.component;
+    } else {
+      delete showing[screen.fromId];
+      return <></>;
+    }
   });
 
   return (
@@ -497,10 +616,7 @@ const FullRtc = () => {
           <div className="remoteAudios">{audioList}</div>
         </div>
         <div className="screenMediaWrap">
-          <div className="remoteScreens">
-            <div className="remoteScreen"></div>
-          </div>
-          <div className="localScreen"></div>
+          <div className="remoteScreens">{screenList}</div>
         </div>
         <div className="chatMediaWrap">
           <div className="chatFeeds">

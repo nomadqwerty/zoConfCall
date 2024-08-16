@@ -297,6 +297,40 @@ const onConsumeState = (
                       setRemoteStream(overWrite);
                     }
                     // console.log(remoteMediaStreams);
+
+                    if (remoteProducer.kind === "screen" && type === "screen") {
+                      const videoEl = (
+                        <video
+                          className="VideoElem"
+                          id={`${remoteProducer.from}-screen`}
+                          key={remoteProducer.from}
+                          autoPlay
+                          playsInline
+                        ></video>
+                      );
+
+                      remoteProducer.screenStreamObject = consumerData;
+                      socket.emit("consumerResume", {
+                        fromId: remoteProducer.from,
+                        type,
+                        accessKey,
+                        socketId,
+                        userName,
+                      });
+                      const newStream = {
+                        fromId: remoteProducer.from,
+                        type,
+                        track: remoteProducer.screenStreamObject.track,
+                        component: videoEl,
+                      };
+
+                      const oldStreams = remoteStreams;
+                      oldStreams.push(newStream);
+
+                      const overWrite = [...oldStreams];
+
+                      setRemoteStream(overWrite);
+                    }
                   }
                 }
               );
