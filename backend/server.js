@@ -23,6 +23,7 @@ const {
   findParticipant,
   viewObject,
 } = require("./utils/mediaSoupUtils");
+const { access } = require("node:fs");
 
 const confObjPath = join(__dirname, "./objectView/conferenceTxt");
 const app = express();
@@ -260,6 +261,12 @@ io.on("connection", async (socket) => {
         participantId: socketId,
       });
     }
+  });
+
+  socket.on("newMessage", (data) => {
+    const { accessKey } = data;
+    console.log(data);
+    socket.to(accessKey).emit("incomingMessage", data);
   });
 });
 

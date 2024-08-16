@@ -43,6 +43,8 @@ const FullRtc = () => {
   const [audioEls, setAudioEls] = useState([]);
   const [screenEls, setScreenEls] = useState([]);
   const [screenReset, setScreenReset] = useState([]);
+  const [messageInput, setMessageInput] = useState("");
+  const [messages, setMessages] = useState([]);
 
   const router = useRouter();
   const confState = useContext(conferenceContext);
@@ -170,7 +172,14 @@ const FullRtc = () => {
           setConsumeScreenState
         )
       );
-
+      socket.on("incomingMessage", (data) => {
+        console.log(data);
+        const msgObj = data.msgObj;
+        msgObj.type = "received";
+        messages.push(msgObj);
+        const newMessages = messages;
+        setMessages([...newMessages]);
+      });
       socket.on("stopScreenConsumer", (data) => {
         console.log("stopped sharing screen for id: ", data.participantId);
         const screenEl = document.getElementById(
@@ -593,6 +602,41 @@ const FullRtc = () => {
     }
   });
 
+  const onTypeMessage = (e) => {
+    setMessageInput(e.target.value);
+  };
+  const onSendMessage = (e) => {
+    e.preventDefault();
+
+    if (messageInput.length > 0) {
+      const msgObj = {
+        time: Date.now(),
+        message: messageInput,
+        type: "send",
+        from: userName,
+      };
+      messages.push(msgObj);
+      const newMessages = messages;
+      setMessages([...newMessages]);
+      console.log(msgObj);
+      socket.emit("newMessage", {
+        userName,
+        accessKey,
+        socketId,
+        msgObj,
+      });
+      setMessageInput("");
+    }
+  };
+  const messagesList = messages.map((message, i) => {
+    return (
+      <div className="chatFeed" key={message.time}>
+        <p>{message.from}</p>
+        <p>{message.message}</p>
+        <time>{message.time}</time>
+      </div>
+    );
+  });
   return (
     <main className="containerr m-0 p-0">
       <div className="mediaWrap m-0 p-0">
@@ -619,9 +663,18 @@ const FullRtc = () => {
           <div className="remoteScreens">{screenList}</div>
         </div>
         <div className="chatMediaWrap">
-          <div className="chatFeeds">
-            <div className="chatFeed"></div>
-          </div>
+          <div className="chatFeeds">{messagesList}</div>
+          <form className="chatInputWrap" onSubmit={onSendMessage}>
+            <input
+              type="text"
+              className="chatInput"
+              value={messageInput}
+              onChange={onTypeMessage}
+            ></input>
+            <button type="submit" className="chatInputBtn">
+              send
+            </button>
+          </form>
         </div>
       </div>
       <div className="mediaControlWrap m-0 p-0">

@@ -122,7 +122,7 @@
 /*  */
 
 .chatFeeds {
-  height: auto;
+  height: 90%;
   width: 95%;
   margin: auto;
   border: 1px solid black;
@@ -134,7 +134,22 @@
   margin: auto;
   border: 1px solid black;
 }
+.chatInputWrap {
+  height: 10%;
+  width: 95%;
+  margin: auto;
+  border: 1px solid black;
+}
 
+.chatInput {
+  width: 70%;
+  height: 100%;
+}
+.chatInputBtn {
+  width: 25%;
+  height: 100%;
+  margin-left: 0.5vw;
+}
 /*  */
 
 .mediaBtnWrap {
