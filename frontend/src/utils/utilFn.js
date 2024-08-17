@@ -1,0 +1,155 @@
+const getUserMedia = async (navigator, setSocketId, setSocket, socketObj) => {
+  if (navigator.mediaDevices) {
+    try {
+      const media = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true,
+      });
+
+      media.getTracks().forEach((track) => {
+        if (track.kind === "video") {
+          const videoEl = document.getElementById("local-video");
+          const newVideoStream = new MediaStream([track]);
+          videoEl.srcObject = newVideoStream;
+        }
+        if (track.kind === "audio") {
+          const audioEl = document.getElementById("local-audio");
+          const newAudioStream = new MediaStream([track]);
+          audioEl.srcObject = newAudioStream;
+        }
+      });
+      setSocketId(socketObj.id);
+      setSocket(socketObj);
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+};
+
+const onTypeMessage = (setMessageInput) => {
+  return (e) => {
+    setMessageInput(e.target.value);
+  };
+};
+const onSendMessage = (
+  accessKey,
+  socketId,
+  messageInput,
+  setMessageInput,
+  userName,
+  messages,
+  setMessages,
+  socket
+) => {
+  return (e) => {
+    e.preventDefault();
+
+    if (messageInput.length > 0) {
+      const msgObj = {
+        time: Date.now(),
+        message: messageInput,
+        type: "send",
+        from: userName,
+      };
+      messages.push(msgObj);
+      const newMessages = messages;
+      setMessages([...newMessages]);
+      console.log(msgObj);
+      socket.emit("newMessage", {
+        userName,
+        accessKey,
+        socketId,
+        msgObj,
+      });
+      setMessageInput("");
+    }
+  };
+};
+
+const addVideoStream = (videoEls) => {
+  if (videoEls.length > 0) {
+    console.log(videoEls);
+    for (let i = 0; i < videoEls.length; i++) {
+      if (!videoEls[i]?.isLoaded) {
+        const videoEl = document.getElementById(`${videoEls[i].fromId}-video`);
+        console.log(`${videoEls[i].fromId}-video`);
+        const videoFeed = new MediaStream([videoEls[i].track]);
+
+        videoEl.srcObject = videoFeed;
+        videoEls[i].isLoaded = true;
+      }
+    }
+  }
+};
+
+const addAudioStream = (audioEls) => {
+  if (audioEls.length > 0) {
+    console.log(audioEls);
+    for (let i = 0; i < audioEls.length; i++) {
+      if (!audioEls[i]?.isLoaded) {
+        const audioEl = document.getElementById(`${audioEls[i].fromId}-audio`);
+        console.log(`${audioEls[i].fromId}-audio`);
+        const audioFeed = new MediaStream([audioEls[i].track]);
+
+        audioEl.srcObject = audioFeed;
+        audioEls[i].isLoaded = true;
+      }
+    }
+  }
+};
+
+const addScreenStream = (screenEls) => {
+  if (screenEls.length > 0) {
+    console.log(screenEls);
+    for (let i = 0; i < screenEls.length; i++) {
+      if (!screenEls[i]?.isLoaded) {
+        const screenEl = document.getElementById(
+          `${screenEls[i].fromId}-screen`
+        );
+
+        screenEl.style.display = "block";
+
+        console.log(`${screenEls[i].fromId}-screen`);
+        const videoFeed = new MediaStream([screenEls[i].track]);
+
+        screenEl.srcObject = videoFeed;
+        screenEls[i].isLoaded = true;
+      }
+    }
+  }
+};
+
+const resetScreen = (
+  screenReset,
+  screenEls,
+  setScreenEls,
+  setRemoteScreenStream
+) => {
+  if (screenReset.length > 0) {
+    console.log(screenEls);
+    let idx;
+    for (let i = 0; i < screenEls.length; i++) {
+      console.log(screenEls[i], screenReset);
+      if (screenEls[i].fromId === screenReset) {
+        idx = i;
+      }
+    }
+
+    if (idx) {
+      screenEls.splice(idx, 1);
+      console.log(screenEls, idx);
+      setRemoteScreenStream([...screenEls]);
+      setScreenEls([...screenEls]);
+    }
+  }
+};
+
+export {
+  getUserMedia,
+  onSendMessage,
+  onTypeMessage,
+  addVideoStream,
+  addAudioStream,
+  addScreenStream,
+  resetScreen,
+};

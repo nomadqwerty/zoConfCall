@@ -13,6 +13,11 @@ const {
   createRcvTransport,
   rcvTransportConnect,
   onConsume,
+  onDisconnect,
+  onDeleteReceiver,
+  onResumeConsumer,
+  onStoppedScreen,
+  onNewMessage,
 } = require("./utils/socketHandlers");
 const PORT = 3050;
 const {
@@ -39,80 +44,6 @@ const io = new Server(server, {
 
 app.use(cors());
 
-/*
-///////: single conference item in conferences list;
-conference :{
-  roomId:meetingAccessKey,
-  participants:[],
-  routers:{
-    videoRouter:Obj,
-    audioRouter:Obj,
-    screenRouter:Obj,
-    }
-  }
-
-///////: single participant item in conference.participants list;
-
-  participant: {
-    participantId:str,
-    participantName:str,
-
-    producers:{
-
-      video: {
-          producerTP:obj,
-          produce:obj,
-        },
-      audio: {
-          producerTP:obj,
-          produce:obj,
-        },
-      screen: {
-          producerTP:obj,
-          produce:obj,
-        },
-      
-      },
-
-    consumers:{
-
-      video:[],
-      audio:[],
-      screen:[]
-
-        }
-    }
-
-    ///////: single consumer item in conference.participants[0].consumers list;
-
-    consumer:{
-      fromId:str,
-      fromName:str,
-      
-      video: {
-          consumerTP:obj,
-          consume:obj,
-        },
-
-      audio: {
-          consumerTP:obj,
-          consume:obj,
-        },
-
-      screen: {
-          consumerTP:obj,
-          consume:obj,
-        },
-    }
-
-  */
-
-/*
-    workers:[]
-
-    ///////: single worker item in workers list;
-    
-    */
 const conferences = [];
 const workers = [];
 
@@ -124,23 +55,7 @@ io.on("connection", async (socket) => {
   let socketLog = null;
   //listen for roomAccesskey event on socket join and add socket to the provided acceskey
   socketLog?.log("some one connected", socket.id);
-  socket.on("disconnect", async () => {
-    console.log("socket left id: ", socket.id);
-    for (let i = 0; i < conferences.length; i++) {
-      let participants = conferences[i].participants;
-      for (let j = 0; j < participants.length; j++) {
-        let roomId = conferences[i].roomId;
-        if (participants[j].participantId === socket.id) {
-          participants.splice(j, 1);
-          console.log(roomId);
-          await viewObject(confObjPath, conferences[i]);
-          socket.to(roomId).emit("participantLeft", {
-            participantId: socket.id,
-          });
-        }
-      }
-    }
-  });
+  socket.on("disconnect", onDisconnect(conferences, socket));
   // join room;
   socket.on(
     "joinConferenceRoom",
@@ -183,29 +98,11 @@ io.on("connection", async (socket) => {
     createRcvTransport(conferences, findRoom, findParticipant)
   );
 
-  socket.on("deleteRcvTransport", async (data) => {
-    const { accessKey, userName, socketId, participantId } = data;
-    const conference = findRoom(conferences, accessKey);
-    const participant = findParticipant(
-      conference.participants,
-      socketId,
-      userName
-    );
-
-    if (participant) {
-      const consumers = participant.consumers;
-      const keys = Object.keys(consumers);
-      for (let i = 0; i < keys.length; i++) {
-        let consumerList = consumers[keys[i]];
-        for (let j = 0; j < consumerList.length; j++) {
-          if (consumerList[j].fromId === participantId) {
-            consumerList.splice(j, 1);
-          }
-        }
-      }
-      await viewObject(confObjPath, conference);
-    }
-  });
+  // delete rcv Transport
+  socket.on(
+    "deleteRcvTransport",
+    onDeleteReceiver(conferences, findRoom, findParticipant)
+  );
 
   // rcv connect
   socket.on(
@@ -216,65 +113,21 @@ io.on("connection", async (socket) => {
   socket.on("consume", onConsume(conferences, findRoom, findParticipant));
 
   // resume consume;
-  socket.on("consumerResume", async (data) => {
-    const { fromId, type, accessKey, socketId, userName } = data;
-    console.log("resume consumer for", fromId, type);
-    const conference = findRoom(conferences, accessKey);
-    if (conference) {
-      const participant = findParticipant(
-        conference.participants,
-        socketId,
-        userName
-      );
+  socket.on(
+    "consumerResume",
+    onResumeConsumer(conferences, findRoom, findParticipant)
+  );
 
-      if (participant && type) {
-        const consumerList = participant.consumers[type];
+  // delete screen consumers
+  socket.on(
+    "stoppedScreenShare",
+    onStoppedScreen(conferences, findRoom, socket)
+  );
 
-        for (let i = 0; i < consumerList.length; i++) {
-          const consumer = consumerList[i].consumer;
-          await consumer.resume();
-          console.log("resumed ", type, " stream for: ", fromId);
-        }
-      }
-    }
-  });
-
-  socket.on("stoppedScreenShare", (data) => {
-    const { accessKey, userName, socketId } = data;
-
-    const conference = findRoom(conferences, accessKey);
-    if (conference) {
-      let roomId = conference.roomId;
-      const participants = conference.participants;
-      for (let i = 0; i < participants.length; i++) {
-        const screens = participants[i].consumers.screen;
-
-        for (let j = 0; j < screens.length; j++) {
-          if (screens[j].fromId === socketId) {
-            screens.splice(j, 1);
-          }
-        }
-      }
-
-      socket.to(roomId).emit("stopScreenConsumer", {
-        participantName: userName,
-        participantId: socketId,
-      });
-    }
-  });
-
-  socket.on("newMessage", (data) => {
-    const { accessKey } = data;
-    console.log(data);
-    socket.to(accessKey).emit("incomingMessage", data);
-  });
+  // BC message to room
+  socket.on("newMessage", onNewMessage(socket));
 });
-
-// io.compress(true);
 
 server.listen(PORT, () =>
   console.log(`My server is actively running on port ${PORT}`)
 );
-// }
-
-// main();

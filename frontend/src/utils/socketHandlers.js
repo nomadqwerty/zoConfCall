@@ -341,10 +341,100 @@ const onConsumeState = (
     }
   }
 };
+
+const onParticipantLeft = (
+  remoteVideoProducers,
+  remoteAudioProducers,
+  remoteScreenProducers,
+  accessKey,
+  userName,
+  socketId,
+  socket
+) => {
+  return (data) => {
+    console.log("participantLeft id: ", data.participantId);
+    const videoEl = document.getElementById(`${data.participantId}-video`);
+    const audioEl = document.getElementById(`${data.participantId}-audio`);
+    const screenEl = document.getElementById(`${data.participantId}-screen`);
+
+    if (videoEl) {
+      videoEl.style.display = "none";
+    }
+    if (audioEl) {
+      audioEl.style.display = "none";
+    }
+    if (screenEl) {
+      screenEl.style.display = "none";
+    }
+
+    console.log(videoEl);
+    console.log(audioEl);
+    console.log(screenEl);
+
+    if (
+      remoteVideoProducers[data.participantId] ||
+      remoteAudioProducers[data.participantId] ||
+      remoteScreenProducers[data.participantId]
+    ) {
+      socket.emit("deleteRcvTransport", {
+        accessKey,
+        userName,
+        socketId,
+        participantId: data.participantId,
+      });
+    }
+    if (remoteVideoProducers[data.participantId]) {
+      delete remoteVideoProducers[data.participantId];
+      console.log(remoteVideoProducers);
+    }
+    if (remoteAudioProducers[data.participantId]) {
+      delete remoteAudioProducers[data.participantId];
+      console.log(remoteAudioProducers);
+    }
+    if (remoteScreenProducers[data.participantId]) {
+      delete remoteScreenProducers[data.participantId];
+      console.log(remoteScreenProducers);
+    }
+  };
+};
+
+const onStoppedScreen = (
+  remoteScreenProducers,
+  setConsumeScreenState,
+  setScreenReset
+) => {
+  return (data) => {
+    console.log("stopped sharing screen for id: ", data.participantId);
+    const screenEl = document.getElementById(`${data.participantId}-screen`);
+    if (screenEl) {
+      screenEl.style.display = "none";
+    }
+    console.log(screenEl);
+    if (remoteScreenProducers[data.participantId]) {
+      setConsumeScreenState("");
+      setScreenReset(data.participantId);
+      delete remoteScreenProducers[data.participantId];
+    }
+  };
+};
+
+const onIncomingMessage = (messages, setMessages) => {
+  return (data) => {
+    console.log(data);
+    const msgObj = data.msgObj;
+    msgObj.type = "received";
+    messages.push(msgObj);
+    const newMessages = messages;
+    setMessages([...newMessages]);
+  };
+};
 export {
   onJoinRoom,
   onCreateProducerTP,
   onGetProducers,
   onNewProducer,
   onConsumeState,
+  onParticipantLeft,
+  onStoppedScreen,
+  onIncomingMessage,
 };

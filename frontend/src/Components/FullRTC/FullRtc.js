@@ -7,16 +7,36 @@ import { io } from "socket.io-client";
 import conferenceContext from "@/context/conference.context";
 import { Device } from "mediasoup-client";
 import { videoParams, audioParams } from "@/utils/config";
+
+import {
+  getUserMedia,
+  onSendMessage,
+  onTypeMessage,
+  addVideoStream,
+  addAudioStream,
+  addScreenStream,
+  resetScreen,
+} from "@/utils/utilFn";
+
+import { messagesArray, mediaList, screenArray } from "./Lists";
+
 import {
   onJoinRoom,
   onCreateProducerTP,
   onGetProducers,
   onNewProducer,
   onConsumeState,
+  onParticipantLeft,
+  onStoppedScreen,
+  onIncomingMessage,
 } from "@/utils/socketHandlers";
+
 import {
   createProducerDevices,
   producerTransportListeners,
+  produceVideoStream,
+  produceAudioStream,
+  produceScreenStream,
 } from "@/utils/mediaSoupUtils";
 
 // import Link from "next/link";
@@ -30,6 +50,7 @@ let socketObj = io(process.env.NEXT_PUBLIC_SIGNAL_HOST, {
 let remoteVideoProducers = {};
 let remoteAudioProducers = {};
 let remoteScreenProducers = {};
+
 const FullRtc = () => {
   const [socket, setSocket] = useState(null);
   const [consumeVideoState, setConsumeVideoState] = useState("");
@@ -65,31 +86,11 @@ const FullRtc = () => {
   } = confState.mediaSoup;
 
   useEffect(() => {
-    if (navigator.mediaDevices) {
-      navigator.mediaDevices
-        .getUserMedia({ audio: true, video: true })
-        .then((res) => {
-          console.log(res);
-          res.getTracks().forEach((track) => {
-            if (track.kind === "video") {
-              const videoEl = document.getElementById("local-video");
-              const newVideoStream = new MediaStream([track]);
-              videoEl.srcObject = newVideoStream;
-            }
-            if (track.kind === "audio") {
-              const audioEl = document.getElementById("local-audio");
-              const newAudioStream = new MediaStream([track]);
-              audioEl.srcObject = newAudioStream;
-            }
-          });
-          setSocketId(socketObj.id);
-          setSocket(socketObj);
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-    }
+    (async () => {
+      getUserMedia(navigator, setSocketId, setSocket, socketObj);
+    })();
   }, []);
+
   useEffect(() => {
     if (socket && confState) {
       console.log(socketId);
@@ -155,7 +156,7 @@ const FullRtc = () => {
         producerTransports,
         socket
       );
-      // TODO: request for all producers
+
       socket.emit(
         "getAvailableProducers",
         {
@@ -172,233 +173,31 @@ const FullRtc = () => {
           setConsumeScreenState
         )
       );
-      socket.on("incomingMessage", (data) => {
-        console.log(data);
-        const msgObj = data.msgObj;
-        msgObj.type = "received";
-        messages.push(msgObj);
-        const newMessages = messages;
-        setMessages([...newMessages]);
-      });
-      socket.on("stopScreenConsumer", (data) => {
-        console.log("stopped sharing screen for id: ", data.participantId);
-        const screenEl = document.getElementById(
-          `${data.participantId}-screen`
-        );
-        if (screenEl) {
-          screenEl.style.display = "none";
-        }
-        console.log(screenEl);
-        if (remoteScreenProducers[data.participantId]) {
-          setConsumeScreenState("");
-          setScreenReset(data.participantId);
-          delete remoteScreenProducers[data.participantId];
-        }
-      });
+      socket.on("incomingMessage", onIncomingMessage(messages, setMessages));
 
-      socket.on("participantLeft", (data) => {
-        console.log("participantLeft id: ", data.participantId);
-        const videoEl = document.getElementById(`${data.participantId}-video`);
-        const audioEl = document.getElementById(`${data.participantId}-audio`);
-        const screenEl = document.getElementById(
-          `${data.participantId}-screen`
-        );
+      socket.on(
+        "stopScreenConsumer",
+        onStoppedScreen(
+          remoteScreenProducers,
+          setConsumeScreenState,
+          setScreenReset
+        )
+      );
 
-        if (videoEl) {
-          videoEl.style.display = "none";
-        }
-        if (audioEl) {
-          audioEl.style.display = "none";
-        }
-        if (screenEl) {
-          screenEl.style.display = "none";
-        }
-
-        console.log(videoEl);
-        console.log(audioEl);
-        console.log(screenEl);
-
-        if (
-          remoteVideoProducers[data.participantId] ||
-          remoteAudioProducers[data.participantId] ||
-          remoteScreenProducers[data.participantId]
-        ) {
-          socket.emit("deleteRcvTransport", {
-            accessKey,
-            userName,
-            socketId,
-            participantId: data.participantId,
-          });
-        }
-        if (remoteVideoProducers[data.participantId]) {
-          delete remoteVideoProducers[data.participantId];
-          console.log(remoteVideoProducers);
-        }
-        if (remoteAudioProducers[data.participantId]) {
-          delete remoteAudioProducers[data.participantId];
-          console.log(remoteAudioProducers);
-        }
-        if (remoteScreenProducers[data.participantId]) {
-          delete remoteScreenProducers[data.participantId];
-          console.log(remoteScreenProducers);
-        }
-      });
+      socket.on(
+        "participantLeft",
+        onParticipantLeft(
+          remoteVideoProducers,
+          remoteAudioProducers,
+          remoteScreenProducers,
+          accessKey,
+          userName,
+          socketId,
+          socket
+        )
+      );
     }
   }, [producerTransports]);
-
-  const produceVideoStream = async () => {
-    if (navigator?.mediaDevices) {
-      try {
-        if (isStreamingVideo === false) {
-          const mediaDevices = await navigator.mediaDevices.enumerateDevices();
-          let selectedVideoDevice;
-
-          mediaDevices.forEach((device, i) => {
-            if (device.kind === "videoinput") {
-              selectedVideoDevice = device;
-              return;
-            }
-          });
-
-          const videoStream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: selectedVideoDevice.deviceId },
-            audio: false,
-          });
-          // TODO: add local stream to local video object:
-          console.log(videoStream);
-
-          videoStream.getTracks().forEach((track) => {
-            if (track.kind === "video") {
-              const videoConstraints = track.getCapabilities();
-
-              const height = videoConstraints.height.max * 0.8;
-              const width = videoConstraints.width.max * 0.8;
-
-              track.applyConstraints({
-                height,
-                width,
-              });
-              const vidParams = {
-                track: track,
-                ...videoParams,
-              };
-              // TODO: store producer and and track state
-              producerTransports.videoProducerTransport.produce(vidParams);
-              const videoEl = document.getElementById("local-video");
-              const newVideoStream = new MediaStream([track]);
-              videoEl.srcObject = newVideoStream;
-            }
-          });
-          setIsStreamingVideo(true);
-        } else {
-          alert("already streaming video");
-        }
-      } catch (err) {}
-    }
-  };
-
-  const produceAudioStream = async () => {
-    if (navigator?.mediaDevices) {
-      try {
-        if (isStreamingAudio === false) {
-          const { noiseSuppression } =
-            navigator.mediaDevices.getSupportedConstraints();
-          console.log(noiseSuppression);
-          const mediaDevices = await navigator.mediaDevices.enumerateDevices();
-          let selectedAudioDevice;
-
-          mediaDevices.forEach((device, i) => {
-            if (device.kind === "audioinput") {
-              selectedAudioDevice = device;
-              return;
-            }
-          });
-
-          const audioStream = await navigator.mediaDevices.getUserMedia({
-            video: false,
-            audio: { deviceId: selectedAudioDevice.deviceId },
-          });
-          // TODO: add local stream to local video object:
-          console.log(audioStream);
-          audioStream.getTracks().forEach((track) => {
-            if (track.kind === "audio") {
-              track.applyConstraints({
-                noiseSuppression,
-              });
-              const audParams = {
-                track: track,
-                ...audioParams,
-              };
-              // TODO: store producer and and track state
-              producerTransports.audioProducerTransport.produce(audParams);
-              const audioEl = document.getElementById("local-audio");
-              const newAudioStream = new MediaStream([track]);
-              audioEl.srcObject = newAudioStream;
-            }
-          });
-          setIsStreamingAudio(true);
-        } else {
-          alert("already streaming audio");
-        }
-      } catch (err) {}
-    }
-  };
-
-  const produceScreenStream = async () => {
-    setScreenReset("");
-    if (navigator?.mediaDevices) {
-      try {
-        if (
-          isStreamingScreen === false &&
-          (isStreamingAudio === true || isStreamingVideo === true)
-        ) {
-          const screenStream = await navigator.mediaDevices.getDisplayMedia();
-          // TODO: add local stream to local video object:
-          console.log(screenStream);
-          screenStream.getTracks().forEach((track) => {
-            if (track.kind === "video") {
-              const videoConstraints = track.getCapabilities();
-
-              const height = videoConstraints.height.max * 0.8;
-              const width = videoConstraints.width.max * 0.8;
-
-              track.applyConstraints({
-                height,
-                width,
-              });
-
-              track.onended = () => {
-                console.log("stopped sharing");
-                setIsStreamingScreen(false);
-                socket.emit("stoppedScreenShare", {
-                  accessKey,
-                  userName,
-                  socketId,
-                });
-              };
-              const screenParams = {
-                track: track,
-                ...videoParams,
-              };
-              // TODO: store producer and and track state
-              producerTransports.screenProducerTransport.produce(screenParams);
-            }
-          });
-          setIsStreamingScreen(true);
-        } else {
-          if (
-            isStreamingScreen === false &&
-            isStreamingAudio === false &&
-            isStreamingVideo === false
-          ) {
-            alert("to share screen, stream either video or audio");
-          } else if (isStreamingScreen === true) {
-            alert("already sharing screen");
-          }
-        }
-      } catch (err) {}
-    }
-  };
 
   // ///////////////////////////////////////////////////////////////////////// consume media
 
@@ -508,135 +307,27 @@ const FullRtc = () => {
   }, [remoteScreenStream]);
 
   useEffect(() => {
-    if (videoEls.length > 0) {
-      console.log(videoEls);
-      for (let i = 0; i < videoEls.length; i++) {
-        if (!videoEls[i]?.isLoaded) {
-          const videoEl = document.getElementById(
-            `${videoEls[i].fromId}-video`
-          );
-          console.log(`${videoEls[i].fromId}-video`);
-          const videoFeed = new MediaStream([videoEls[i].track]);
-
-          videoEl.srcObject = videoFeed;
-          videoEls[i].isLoaded = true;
-        }
-      }
-    }
+    addVideoStream(videoEls);
   }, [videoEls]);
 
   useEffect(() => {
-    if (audioEls.length > 0) {
-      console.log(audioEls);
-      for (let i = 0; i < audioEls.length; i++) {
-        if (!audioEls[i]?.isLoaded) {
-          const audioEl = document.getElementById(
-            `${audioEls[i].fromId}-audio`
-          );
-          console.log(`${audioEls[i].fromId}-audio`);
-          const audioFeed = new MediaStream([audioEls[i].track]);
-
-          audioEl.srcObject = audioFeed;
-          audioEls[i].isLoaded = true;
-        }
-      }
-    }
+    addAudioStream(audioEls);
   }, [audioEls]);
 
   useEffect(() => {
-    if (screenEls.length > 0) {
-      console.log(screenEls);
-      for (let i = 0; i < screenEls.length; i++) {
-        if (!screenEls[i]?.isLoaded) {
-          const screenEl = document.getElementById(
-            `${screenEls[i].fromId}-screen`
-          );
-
-          screenEl.style.display = "block";
-
-          console.log(`${screenEls[i].fromId}-screen`);
-          const videoFeed = new MediaStream([screenEls[i].track]);
-
-          screenEl.srcObject = videoFeed;
-          screenEls[i].isLoaded = true;
-        }
-      }
-    }
+    addScreenStream(screenEls);
   }, [screenEls]);
 
   useEffect(() => {
-    if (screenReset.length > 0) {
-      console.log(screenEls);
-      let idx;
-      for (let i = 0; i < screenEls.length; i++) {
-        console.log(screenEls[i], screenReset);
-        if (screenEls[i].fromId === screenReset) {
-          idx = i;
-        }
-      }
-
-      if (idx) {
-        screenEls.splice(idx, 1);
-        console.log(screenEls, idx);
-        setRemoteScreenStream([...screenEls]);
-        setScreenEls([...screenEls]);
-      }
-    }
+    resetScreen(screenReset, screenEls, setScreenEls, setRemoteScreenStream);
   }, [screenReset]);
 
-  const videoList = remoteVideoStream.map((vid, i) => {
-    return vid.component;
-  });
-  const audioList = remoteAudioStream.map((aud, i) => {
-    return aud.component;
-  });
-  let showing = {};
-  const screenList = remoteScreenStream.map((screen, i) => {
-    console.log(screen);
-    if (!showing[screen.fromId]) {
-      showing[screen.fromId] = screen;
-      return screen.component;
-    } else {
-      delete showing[screen.fromId];
-      return <></>;
-    }
-  });
+  // TODO:
+  const videoList = mediaList(remoteVideoStream);
+  const audioList = mediaList(remoteAudioStream);
+  const screenList = screenArray(remoteScreenStream);
+  const messagesList = messagesArray(messages);
 
-  const onTypeMessage = (e) => {
-    setMessageInput(e.target.value);
-  };
-  const onSendMessage = (e) => {
-    e.preventDefault();
-
-    if (messageInput.length > 0) {
-      const msgObj = {
-        time: Date.now(),
-        message: messageInput,
-        type: "send",
-        from: userName,
-      };
-      messages.push(msgObj);
-      const newMessages = messages;
-      setMessages([...newMessages]);
-      console.log(msgObj);
-      socket.emit("newMessage", {
-        userName,
-        accessKey,
-        socketId,
-        msgObj,
-      });
-      setMessageInput("");
-    }
-  };
-  const messagesList = messages.map((message, i) => {
-    return (
-      <div className="chatFeed" key={message.time}>
-        <p>{message.from}</p>
-        <p>{message.message}</p>
-        <time>{message.time}</time>
-      </div>
-    );
-  });
   return (
     <main className="containerr m-0 p-0">
       <div className="mediaWrap m-0 p-0">
@@ -664,12 +355,24 @@ const FullRtc = () => {
         </div>
         <div className="chatMediaWrap">
           <div className="chatFeeds">{messagesList}</div>
-          <form className="chatInputWrap" onSubmit={onSendMessage}>
+          <form
+            className="chatInputWrap"
+            onSubmit={onSendMessage(
+              accessKey,
+              socketId,
+              messageInput,
+              setMessageInput,
+              userName,
+              messages,
+              setMessages,
+              socket
+            )}
+          >
             <input
               type="text"
               className="chatInput"
               value={messageInput}
-              onChange={onTypeMessage}
+              onChange={onTypeMessage(setMessageInput)}
             ></input>
             <button type="submit" className="chatInputBtn">
               send
@@ -682,13 +385,47 @@ const FullRtc = () => {
         <div className="videoControlWrap">
           <div className="mediaBtnWrap">
             <div className="mediaBtn">
-              <button onClick={produceVideoStream}>video</button>
+              <button
+                onClick={produceVideoStream(
+                  isStreamingVideo,
+                  videoParams,
+                  setIsStreamingVideo,
+                  producerTransports
+                )}
+              >
+                video
+              </button>
             </div>
             <div className="mediaBtn">
-              <button onClick={produceAudioStream}>audio</button>
+              <button
+                onClick={produceAudioStream(
+                  isStreamingAudio,
+                  audioParams,
+                  setIsStreamingAudio,
+                  producerTransports
+                )}
+              >
+                audio
+              </button>
             </div>
             <div className="mediaBtn">
-              <button onClick={produceScreenStream}>screen</button>
+              <button
+                onClick={produceScreenStream(
+                  accessKey,
+                  userName,
+                  socketId,
+                  isStreamingVideo,
+                  isStreamingAudio,
+                  isStreamingScreen,
+                  videoParams,
+                  setIsStreamingScreen,
+                  setScreenReset,
+                  producerTransports,
+                  socket
+                )}
+              >
+                screen
+              </button>
             </div>
           </div>
         </div>
