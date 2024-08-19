@@ -1,4 +1,11 @@
-const getUserMedia = async (navigator, setSocketId, setSocket, socketObj) => {
+const getUserMedia = async (
+  navigator,
+  setSocketId,
+  setSocket,
+  socketObj,
+  setVideoDevices,
+  setAudioDevices
+) => {
   if (navigator.mediaDevices) {
     try {
       const media = await navigator.mediaDevices.getUserMedia({
@@ -18,6 +25,21 @@ const getUserMedia = async (navigator, setSocketId, setSocket, socketObj) => {
           audioEl.srcObject = newAudioStream;
         }
       });
+      const mediaDevices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = [];
+      const audioDevices = [];
+      for (let i = 0; i < mediaDevices.length; i++) {
+        if (mediaDevices[i].kind === "videoinput") {
+          videoDevices.push(mediaDevices[i]);
+        }
+        if (mediaDevices[i].kind === "audioinput") {
+          audioDevices.push(mediaDevices[i]);
+        }
+      }
+
+      setVideoDevices([...videoDevices]);
+      setAudioDevices([...audioDevices]);
+
       setSocketId(socketObj.id);
       setSocket(socketObj);
     } catch (error) {
@@ -143,7 +165,32 @@ const resetScreen = (
     }
   }
 };
+const testUserMedia = async (navigator, videoDevice, audioDevice, type) => {
+  if (navigator.mediaDevices) {
+    try {
+      console.log(type);
+      const media = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: audioDevice.deviceId },
+        video: { deviceId: videoDevice.deviceId },
+      });
 
+      media.getTracks().forEach((track) => {
+        if (track.kind === "video" && type === "video") {
+          const videoEl = document.getElementById("test-video");
+          const newVideoStream = new MediaStream([track]);
+          videoEl.srcObject = newVideoStream;
+        }
+        if (track.kind === "audio" && type === "audio") {
+          const audioEl = document.getElementById("test-audio");
+          const newAudioStream = new MediaStream([track]);
+          audioEl.srcObject = newAudioStream;
+        }
+      });
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+};
 export {
   getUserMedia,
   onSendMessage,
@@ -152,4 +199,5 @@ export {
   addAudioStream,
   addScreenStream,
   resetScreen,
+  testUserMedia,
 };

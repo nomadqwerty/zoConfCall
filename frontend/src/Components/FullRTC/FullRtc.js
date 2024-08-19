@@ -16,6 +16,7 @@ import {
   addAudioStream,
   addScreenStream,
   resetScreen,
+  testUserMedia,
 } from "@/utils/utilFn";
 
 import { messagesArray, mediaList, screenArray } from "./Lists";
@@ -66,6 +67,10 @@ const FullRtc = () => {
   const [screenReset, setScreenReset] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [messages, setMessages] = useState([]);
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [selectedVideoDevice, setSelectedVideoDevice] = useState(null);
+  const [audioDevices, setAudioDevices] = useState([]);
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState(null);
 
   const router = useRouter();
   const confState = useContext(conferenceContext);
@@ -87,7 +92,14 @@ const FullRtc = () => {
 
   useEffect(() => {
     (async () => {
-      getUserMedia(navigator, setSocketId, setSocket, socketObj);
+      getUserMedia(
+        navigator,
+        setSocketId,
+        setSocket,
+        socketObj,
+        setVideoDevices,
+        setAudioDevices
+      );
     })();
   }, []);
 
@@ -322,14 +334,87 @@ const FullRtc = () => {
     resetScreen(screenReset, screenEls, setScreenEls, setRemoteScreenStream);
   }, [screenReset]);
 
-  // TODO:
   const videoList = mediaList(remoteVideoStream);
   const audioList = mediaList(remoteAudioStream);
   const screenList = screenArray(remoteScreenStream);
   const messagesList = messagesArray(messages);
 
+  // TODO:
+
+  useEffect(() => {
+    if (videoDevices.length > 0) {
+      console.log(videoDevices);
+    }
+  }, [videoDevices]);
+
+  useEffect(() => {
+    if (audioDevices.length > 0) {
+      console.log(audioDevices);
+    }
+  }, [audioDevices]);
+
+  const onSetVideoDevice = (idx) => {
+    return (e) => {
+      setSelectedVideoDevice(idx);
+    };
+  };
+  const onSetAudioDevice = (idx) => {
+    return (e) => {
+      setSelectedAudioDevice(idx);
+    };
+  };
+  const stopTesting = () => {
+    const videoEl = document.getElementById(`test-video`);
+    const audioEl = document.getElementById(`test-audio`);
+
+    if (videoEl) {
+      videoEl.srcObject = null;
+    }
+    if (audioEl) {
+      audioEl.srcObject = null;
+    }
+    setSelectedVideoDevice(null);
+    setSelectedAudioDevice(null);
+  };
+  const videoDeviceList = videoDevices.map((device, i) => {
+    return (
+      <li onClick={onSetVideoDevice(i)} key={device.deviceId}>
+        {device.label}
+      </li>
+    );
+  });
+  const audioDeviceList = audioDevices.map((device, i) => {
+    return (
+      <li onClick={onSetAudioDevice(i)} key={i}>
+        {device.label}
+      </li>
+    );
+  });
+
+  useEffect(() => {
+    if (selectedVideoDevice !== null) {
+      testUserMedia(
+        navigator,
+        videoDevices[selectedVideoDevice],
+        audioDevices[selectedAudioDevice || 0],
+        "video"
+      );
+    }
+  }, [selectedVideoDevice]);
+
+  useEffect(() => {
+    if (selectedAudioDevice !== null) {
+      testUserMedia(
+        navigator,
+        videoDevices[selectedVideoDevice || 0],
+        audioDevices[selectedAudioDevice],
+        "audio"
+      );
+    }
+  }, [selectedAudioDevice]);
+
   return (
-    <main className="containerr m-0 p-0">
+    <main className="container m-0 p-0">
       <div className="mediaWrap m-0 p-0">
         <div className="videoMediaWrap">
           <div className="localVideo">
@@ -379,6 +464,43 @@ const FullRtc = () => {
             </button>
           </form>
         </div>
+        <div className="mediaSettingsWrap">
+          <div className="mediaSettings">
+            <div className="testMediaWrap">
+              <div className="testVideo">
+                <div className="videoElemWrap">
+                  <video
+                    className="VideoElem"
+                    id={`test-video`}
+                    autoPlay
+                    playsInline
+                    controls
+                  ></video>
+                </div>
+                <div className="audioElemWrap">
+                  <audio
+                    className="audioElem"
+                    id={`test-audio`}
+                    autoPlay
+                    playsInline
+                    muted={isStreamingAudio ? true : false}
+                    controls
+                  ></audio>
+                </div>
+                <div className="stopMediaBtnWrap">
+                  <button onClick={stopTesting} className="stopMediaBtn">
+                    stop
+                  </button>
+                </div>
+                <div className="deviceListWrap">
+                  <ul className="devices">{videoDeviceList}</ul>
+                  <ul className="devices">{audioDeviceList}</ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="effectsSettings"></div>
+        </div>
       </div>
       <div className="mediaControlWrap m-0 p-0">
         <div className="logoControlWrap"></div>
@@ -390,7 +512,8 @@ const FullRtc = () => {
                   isStreamingVideo,
                   videoParams,
                   setIsStreamingVideo,
-                  producerTransports
+                  producerTransports,
+                  videoDevices[selectedVideoDevice || 0]
                 )}
               >
                 video
@@ -402,7 +525,8 @@ const FullRtc = () => {
                   isStreamingAudio,
                   audioParams,
                   setIsStreamingAudio,
-                  producerTransports
+                  producerTransports,
+                  audioDevices[selectedAudioDevice || 0]
                 )}
               >
                 audio

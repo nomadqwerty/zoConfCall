@@ -1,4 +1,4 @@
-.containerr {
+.container {
   background: #e7e1e1;
   height: 100vh;
   width: 100vw;
@@ -23,7 +23,7 @@
 /*  */
 .screenMediaWrap {
   height: 100%;
-  width: 33.3%;
+  width: 24.5%;
   overflow-x: hidden;
   overflow-y: scroll;
   border: 1px solid black;
@@ -32,16 +32,7 @@
 }
 .videoMediaWrap {
   height: 100%;
-  width: 33.3%;
-  overflow-x: hidden;
-  overflow-y: scroll;
-  border: 1px solid black;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.chatMediaWrap {
-  height: 100%;
-  width: 33.3%;
+  width: 24.5%;
   overflow-x: hidden;
   overflow-y: scroll;
   border: 1px solid black;
@@ -49,6 +40,24 @@
   scrollbar-width: none;
 }
 
+.chatMediaWrap {
+  height: 100%;
+  width: 24.5%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  border: 1px solid black;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.mediaSettingsWrap {
+  height: 100%;
+  width: 24.5%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  border: 1px solid black;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 /*  */
 .logoControlWrap {
   height: 100%;
@@ -65,6 +74,13 @@
 .chatControlWrap {
   height: 100%;
   width: 33.3%;
+  overflow: hidden;
+  border: 1px solid black;
+}
+
+.testMediaWrap {
+  height: 100%;
+  width: 100%;
   overflow: hidden;
   border: 1px solid black;
 }
@@ -150,6 +166,18 @@
   height: 100%;
   margin-left: 0.5vw;
 }
+.mediaSettings {
+  height: 90%;
+  width: 95%;
+  margin: auto;
+  border: 1px solid black;
+}
+.effectsSettings {
+  height: 10%;
+  width: 95%;
+  margin: auto;
+  border: 1px solid black;
+}
 /*  */
 
 .mediaBtnWrap {
@@ -172,4 +200,56 @@
   overflow: hidden;
   margin: auto;
   border: 1px solid rgb(4, 4, 4);
+}
+.audioElem {
+  height: 5vh;
+  width: 100%;
+  overflow: hidden;
+  margin: auto;
+  border: 1px solid rgb(4, 4, 4);
+}
+.testVideo {
+  height: 100vh;
+  overflow: hidden;
+}
+.videoElemWrap {
+  height: auto;
+  width: 100%;
+  overflow: hidden;
+  margin: auto;
+  background: #000;
+  border: 1px solid rgb(4, 4, 4);
+}
+.audioElemWrap {
+  height: auto;
+  width: 100%;
+  overflow: hidden;
+  margin: auto;
+  background: #785e5e;
+  border: 1px solid rgb(4, 4, 4);
+}
+.deviceListWrap {
+  height: auto;
+}
+.devices {
+  background: white;
+  width: 90%;
+  padding: 10px;
+}
+.devices li {
+  width: 90%;
+  margin-top: 10px;
+  word-wrap: break-word;
+  cursor: pointer;
+}
+.stopMediaBtnWrap {
+  width: 90%;
+
+  margin: auto;
+  padding-top: 2vh;
+}
+.stopMediaBtn {
+  margin: auto;
+  width: 20%;
+  margin-left: 40%;
 }

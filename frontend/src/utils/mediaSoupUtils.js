@@ -231,23 +231,14 @@ const produceVideoStream = (
   isStreamingVideo,
   videoParams,
   setIsStreamingVideo,
-  producerTransports
+  producerTransports,
+  selectedVideoDevice
 ) => {
   return async () => {
     let navigator = window.navigator;
     if (navigator?.mediaDevices) {
       try {
         if (isStreamingVideo === false) {
-          const mediaDevices = await navigator.mediaDevices.enumerateDevices();
-          let selectedVideoDevice;
-
-          mediaDevices.forEach((device, i) => {
-            if (device.kind === "videoinput") {
-              selectedVideoDevice = device;
-              return;
-            }
-          });
-
           const videoStream = await navigator.mediaDevices.getUserMedia({
             video: { deviceId: selectedVideoDevice.deviceId },
             audio: false,
@@ -290,7 +281,8 @@ const produceAudioStream = (
   isStreamingAudio,
   audioParams,
   setIsStreamingAudio,
-  producerTransports
+  producerTransports,
+  selectedAudioDevice
 ) => {
   return async () => {
     let navigator = window.navigator;
@@ -299,16 +291,6 @@ const produceAudioStream = (
         if (isStreamingAudio === false) {
           const { noiseSuppression } =
             navigator.mediaDevices.getSupportedConstraints();
-          console.log(noiseSuppression);
-          const mediaDevices = await navigator.mediaDevices.enumerateDevices();
-          let selectedAudioDevice;
-
-          mediaDevices.forEach((device, i) => {
-            if (device.kind === "audioinput") {
-              selectedAudioDevice = device;
-              return;
-            }
-          });
 
           const audioStream = await navigator.mediaDevices.getUserMedia({
             video: false,
