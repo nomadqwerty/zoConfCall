@@ -30,4 +30,14 @@ const messagesArray = (messages) => {
   });
 };
 
-export { mediaList, screenArray, messagesArray };
+const mediaDeviceList = (devices, onSetMediaDevice, setSelectedMediaDevice) => {
+  return devices.map((device, i) => {
+    return (
+      <li onClick={onSetMediaDevice(i, setSelectedMediaDevice)} key={i}>
+        {device.label}
+      </li>
+    );
+  });
+};
+
+export { mediaList, screenArray, messagesArray, mediaDeviceList };

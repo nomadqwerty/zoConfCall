@@ -1,4 +1,4 @@
-const onJoinRoom = (roomRouterRtp, setRoomRouterRtp) => {
+const onJoinRoom = (roomRouterRtp, setRoomRouterRtp, messages, setMessages) => {
   return (data) => {
     if (
       data?.audioRtpCapabilities &&
@@ -8,6 +8,14 @@ const onJoinRoom = (roomRouterRtp, setRoomRouterRtp) => {
       if (roomRouterRtp === null) {
         console.log(data);
         setRoomRouterRtp(data);
+        console.log(data.messages);
+        for (let message of data.messages) {
+          console.log(message);
+          message.msgObj.type = "received";
+          messages.push(message.msgObj);
+        }
+        const newMessages = messages;
+        setMessages([...newMessages]);
       }
     }
     // room is set up start setting up to produce streams (video, audio).

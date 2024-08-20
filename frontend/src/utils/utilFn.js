@@ -191,6 +191,33 @@ const testUserMedia = async (navigator, videoDevice, audioDevice, type) => {
     }
   }
 };
+
+const onSetVideoDevice = (idx, setSelectedVideoDevice) => {
+  return (e) => {
+    setSelectedVideoDevice(idx);
+  };
+};
+const onSetAudioDevice = (idx, setSelectedAudioDevice) => {
+  return (e) => {
+    setSelectedAudioDevice(idx);
+  };
+};
+
+const stopTesting = (setSelectedVideoDevice, setSelectedAudioDevice) => {
+  return () => {
+    const videoEl = document.getElementById(`test-video`);
+    const audioEl = document.getElementById(`test-audio`);
+
+    if (videoEl) {
+      videoEl.srcObject = null;
+    }
+    if (audioEl) {
+      audioEl.srcObject = null;
+    }
+    setSelectedVideoDevice(null);
+    setSelectedAudioDevice(null);
+  };
+};
 export {
   getUserMedia,
   onSendMessage,
@@ -200,4 +227,7 @@ export {
   addScreenStream,
   resetScreen,
   testUserMedia,
+  onSetVideoDevice,
+  onSetAudioDevice,
+  stopTesting,
 };

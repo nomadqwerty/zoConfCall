@@ -125,7 +125,7 @@ io.on("connection", async (socket) => {
   );
 
   // BC message to room
-  socket.on("newMessage", onNewMessage(socket));
+  socket.on("newMessage", onNewMessage(socket, findRoom, conferences));
 });
 
 server.listen(PORT, () =>

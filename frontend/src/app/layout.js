@@ -10,8 +10,8 @@ import { ConferenceProvider } from "@/context/conference.context";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Psymax",
-  description: "Psymax video chat",
+  title: "ZN1",
+  description: "ZN1 video chat",
 };
 
 export default function RootLayout({ children }) {

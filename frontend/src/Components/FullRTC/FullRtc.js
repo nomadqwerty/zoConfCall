@@ -17,9 +17,17 @@ import {
   addScreenStream,
   resetScreen,
   testUserMedia,
+  onSetVideoDevice,
+  onSetAudioDevice,
+  stopTesting,
 } from "@/utils/utilFn";
 
-import { messagesArray, mediaList, screenArray } from "./Lists";
+import {
+  messagesArray,
+  mediaList,
+  screenArray,
+  mediaDeviceList,
+} from "./Lists";
 
 import {
   onJoinRoom,
@@ -42,8 +50,6 @@ import {
 
 // import Link from "next/link";
 
-let accessKey = "123asdf";
-let userName = "dave";
 let socketObj = io(process.env.NEXT_PUBLIC_SIGNAL_HOST, {
   transports: ["websocket"],
 });
@@ -71,6 +77,8 @@ const FullRtc = () => {
   const [selectedVideoDevice, setSelectedVideoDevice] = useState(null);
   const [audioDevices, setAudioDevices] = useState([]);
   const [selectedAudioDevice, setSelectedAudioDevice] = useState(null);
+  const [userName, setUserName] = useState("");
+  const [accessKey, setAccessKey] = useState("");
 
   const router = useRouter();
   const confState = useContext(conferenceContext);
@@ -92,6 +100,12 @@ const FullRtc = () => {
 
   useEffect(() => {
     (async () => {
+      let params = window.location.search.replace("?", "");
+      params = params.split("&");
+      let key = params[0].split("=")[1];
+      let name = params[1].split("=")[1];
+      setAccessKey(key);
+      setUserName(name);
       getUserMedia(
         navigator,
         setSocketId,
@@ -106,6 +120,7 @@ const FullRtc = () => {
   useEffect(() => {
     if (socket && confState) {
       console.log(socketId);
+
       socket.emit(
         "joinConferenceRoom",
         {
@@ -113,7 +128,7 @@ const FullRtc = () => {
           accessKey,
           socketId,
         },
-        onJoinRoom(roomRouterRtp, setRoomRouterRtp)
+        onJoinRoom(roomRouterRtp, setRoomRouterRtp, messages, setMessages)
       );
     }
   }, [socket]);
@@ -353,44 +368,6 @@ const FullRtc = () => {
     }
   }, [audioDevices]);
 
-  const onSetVideoDevice = (idx) => {
-    return (e) => {
-      setSelectedVideoDevice(idx);
-    };
-  };
-  const onSetAudioDevice = (idx) => {
-    return (e) => {
-      setSelectedAudioDevice(idx);
-    };
-  };
-  const stopTesting = () => {
-    const videoEl = document.getElementById(`test-video`);
-    const audioEl = document.getElementById(`test-audio`);
-
-    if (videoEl) {
-      videoEl.srcObject = null;
-    }
-    if (audioEl) {
-      audioEl.srcObject = null;
-    }
-    setSelectedVideoDevice(null);
-    setSelectedAudioDevice(null);
-  };
-  const videoDeviceList = videoDevices.map((device, i) => {
-    return (
-      <li onClick={onSetVideoDevice(i)} key={device.deviceId}>
-        {device.label}
-      </li>
-    );
-  });
-  const audioDeviceList = audioDevices.map((device, i) => {
-    return (
-      <li onClick={onSetAudioDevice(i)} key={i}>
-        {device.label}
-      </li>
-    );
-  });
-
   useEffect(() => {
     if (selectedVideoDevice !== null) {
       testUserMedia(
@@ -488,18 +465,35 @@ const FullRtc = () => {
                   ></audio>
                 </div>
                 <div className="stopMediaBtnWrap">
-                  <button onClick={stopTesting} className="stopMediaBtn">
+                  <button
+                    onClick={stopTesting(
+                      setSelectedVideoDevice,
+                      setSelectedAudioDevice
+                    )}
+                    className="stopMediaBtn"
+                  >
                     stop
                   </button>
                 </div>
                 <div className="deviceListWrap">
-                  <ul className="devices">{videoDeviceList}</ul>
-                  <ul className="devices">{audioDeviceList}</ul>
+                  <ul className="devices">
+                    {mediaDeviceList(
+                      videoDevices,
+                      onSetVideoDevice,
+                      setSelectedVideoDevice
+                    )}
+                  </ul>
+                  <ul className="devices">
+                    {mediaDeviceList(
+                      audioDevices,
+                      onSetAudioDevice,
+                      setSelectedAudioDevice
+                    )}
+                  </ul>
                 </div>
               </div>
             </div>
           </div>
-          <div className="effectsSettings"></div>
         </div>
       </div>
       <div className="mediaControlWrap m-0 p-0">

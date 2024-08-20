@@ -68,6 +68,8 @@ const onJoinRoom = (
         rtpCapabilities.audioRtpCapabilities =
           existingConference.routers.audioRouter.rtpCapabilities;
 
+        rtpCapabilities.messages = existingConference.messages;
+
         callback(rtpCapabilities);
       } else {
         console.log("participant count exeeded");
@@ -81,6 +83,7 @@ const onJoinRoom = (
         roomId: roomId,
         participants: [],
         routers: roomRouters,
+        messages: [],
       };
 
       // 2: create participant object
@@ -125,6 +128,8 @@ const onJoinRoom = (
       rtpCapabilities.audioRtpCapabilities =
         newConferenceRoom.routers.audioRouter.rtpCapabilities;
 
+      rtpCapabilities.messages = newConferenceRoom.messages;
+
       callback(rtpCapabilities);
     }
 
@@ -146,10 +151,10 @@ const onCreateRtcTransport = (
     { producer, consumer, accessKey, userName, socketId },
     callback
   ) => {
-    if (producer === true && consumer === false) {
+    const conference = findRoom(conferences, accessKey);
+    if (producer === true && consumer === false && conference) {
       // create producer rtc transport for participant based on the room routers.
       // 1: find room and participant;
-      const conference = findRoom(conferences, accessKey);
       transportLog?.log(conference.participants);
       const participant = findParticipant(
         conference.participants,
@@ -958,11 +963,15 @@ const onStoppedScreen = (conferences, findRoom, socket) => {
   };
 };
 
-const onNewMessage = (socket) => {
+const onNewMessage = (socket, findRoom, conferences) => {
   return (data) => {
     const { accessKey } = data;
-    console.log(`broadcast message to room ${accessKey}`);
-    socket.to(accessKey).emit("incomingMessage", data);
+    const conference = findRoom(conferences, accessKey);
+    if (conference) {
+      console.log(`broadcast message to room ${accessKey}`);
+      conference.messages.push(data);
+      socket.to(accessKey).emit("incomingMessage", data);
+    }
   };
 };
 
