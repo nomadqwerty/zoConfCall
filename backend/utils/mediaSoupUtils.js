@@ -9,10 +9,14 @@ const {
 } = require("./config");
 
 const findRoom = (conferences, accessKey) => {
-  for (let i = 0; i < conferences.length; i++) {
-    if (conferences[i].roomId === accessKey) {
-      return conferences[i];
+  try {
+    for (let i = 0; i < conferences.length; i++) {
+      if (conferences[i].roomId === accessKey) {
+        return conferences[i];
+      }
     }
+  } catch (error) {
+    console.log(error.message);
   }
 };
 
