@@ -50,7 +50,11 @@ const getUserMedia = async (
 
 const onTypeMessage = (setMessageInput) => {
   return (e) => {
-    setMessageInput(e.target.value);
+    try {
+      setMessageInput(e.target.value);
+    } catch (error) {
+      console.log(error.message);
+    }
   };
 };
 const onSendMessage = (
@@ -64,80 +68,100 @@ const onSendMessage = (
   socket
 ) => {
   return (e) => {
-    e.preventDefault();
+    try {
+      e.preventDefault();
 
-    if (messageInput.length > 0) {
-      const msgObj = {
-        time: Date.now(),
-        message: messageInput,
-        type: "send",
-        from: userName,
-      };
-      messages.push(msgObj);
-      const newMessages = messages;
-      setMessages([...newMessages]);
-      console.log(msgObj);
-      socket.emit("newMessage", {
-        userName,
-        accessKey,
-        socketId,
-        msgObj,
-      });
-      setMessageInput("");
+      if (messageInput.length > 0) {
+        const msgObj = {
+          time: Date.now(),
+          message: messageInput,
+          type: "send",
+          from: userName,
+        };
+        messages.push(msgObj);
+        const newMessages = messages;
+        setMessages([...newMessages]);
+        console.log(msgObj);
+        socket.emit("newMessage", {
+          userName,
+          accessKey,
+          socketId,
+          msgObj,
+        });
+        setMessageInput("");
+      }
+    } catch (error) {
+      console.log(error.message);
     }
   };
 };
 
 const addVideoStream = (videoEls) => {
-  if (videoEls.length > 0) {
-    console.log(videoEls);
-    for (let i = 0; i < videoEls.length; i++) {
-      if (!videoEls[i]?.isLoaded) {
-        const videoEl = document.getElementById(`${videoEls[i].fromId}-video`);
-        console.log(`${videoEls[i].fromId}-video`);
-        const videoFeed = new MediaStream([videoEls[i].track]);
+  try {
+    if (videoEls.length > 0) {
+      console.log(videoEls);
+      for (let i = 0; i < videoEls.length; i++) {
+        if (!videoEls[i]?.isLoaded) {
+          const videoEl = document.getElementById(
+            `${videoEls[i].fromId}-video`
+          );
+          console.log(`${videoEls[i].fromId}-video`);
+          const videoFeed = new MediaStream([videoEls[i].track]);
 
-        videoEl.srcObject = videoFeed;
-        videoEls[i].isLoaded = true;
+          videoEl.srcObject = videoFeed;
+          videoEls[i].isLoaded = true;
+        }
       }
     }
+  } catch (error) {
+    console.log(error.message);
   }
 };
 
 const addAudioStream = (audioEls) => {
-  if (audioEls.length > 0) {
-    console.log(audioEls);
-    for (let i = 0; i < audioEls.length; i++) {
-      if (!audioEls[i]?.isLoaded) {
-        const audioEl = document.getElementById(`${audioEls[i].fromId}-audio`);
-        console.log(`${audioEls[i].fromId}-audio`);
-        const audioFeed = new MediaStream([audioEls[i].track]);
+  try {
+    if (audioEls.length > 0) {
+      console.log(audioEls);
+      for (let i = 0; i < audioEls.length; i++) {
+        if (!audioEls[i]?.isLoaded) {
+          const audioEl = document.getElementById(
+            `${audioEls[i].fromId}-audio`
+          );
+          console.log(`${audioEls[i].fromId}-audio`);
+          const audioFeed = new MediaStream([audioEls[i].track]);
 
-        audioEl.srcObject = audioFeed;
-        audioEls[i].isLoaded = true;
+          audioEl.srcObject = audioFeed;
+          audioEls[i].isLoaded = true;
+        }
       }
     }
+  } catch (error) {
+    console.log(error.message);
   }
 };
 
 const addScreenStream = (screenEls) => {
-  if (screenEls.length > 0) {
-    console.log(screenEls);
-    for (let i = 0; i < screenEls.length; i++) {
-      if (!screenEls[i]?.isLoaded) {
-        const screenEl = document.getElementById(
-          `${screenEls[i].fromId}-screen`
-        );
+  try {
+    if (screenEls.length > 0) {
+      console.log(screenEls);
+      for (let i = 0; i < screenEls.length; i++) {
+        if (!screenEls[i]?.isLoaded) {
+          const screenEl = document.getElementById(
+            `${screenEls[i].fromId}-screen`
+          );
 
-        screenEl.style.display = "block";
+          screenEl.style.display = "block";
 
-        console.log(`${screenEls[i].fromId}-screen`);
-        const videoFeed = new MediaStream([screenEls[i].track]);
+          console.log(`${screenEls[i].fromId}-screen`);
+          const videoFeed = new MediaStream([screenEls[i].track]);
 
-        screenEl.srcObject = videoFeed;
-        screenEls[i].isLoaded = true;
+          screenEl.srcObject = videoFeed;
+          screenEls[i].isLoaded = true;
+        }
       }
     }
+  } catch (error) {
+    console.log(error.message);
   }
 };
 
@@ -147,22 +171,26 @@ const resetScreen = (
   setScreenEls,
   setRemoteScreenStream
 ) => {
-  if (screenReset.length > 0) {
-    console.log(screenEls);
-    let idx;
-    for (let i = 0; i < screenEls.length; i++) {
-      console.log(screenEls[i], screenReset);
-      if (screenEls[i].fromId === screenReset) {
-        idx = i;
+  try {
+    if (screenReset.length > 0) {
+      console.log(screenEls);
+      let idx;
+      for (let i = 0; i < screenEls.length; i++) {
+        console.log(screenEls[i], screenReset);
+        if (screenEls[i].fromId === screenReset) {
+          idx = i;
+        }
+      }
+
+      if (idx) {
+        screenEls.splice(idx, 1);
+        console.log(screenEls, idx);
+        setRemoteScreenStream([...screenEls]);
+        setScreenEls([...screenEls]);
       }
     }
-
-    if (idx) {
-      screenEls.splice(idx, 1);
-      console.log(screenEls, idx);
-      setRemoteScreenStream([...screenEls]);
-      setScreenEls([...screenEls]);
-    }
+  } catch (error) {
+    console.log(error.message);
   }
 };
 const testUserMedia = async (navigator, videoDevice, audioDevice, type) => {
@@ -193,29 +221,41 @@ const testUserMedia = async (navigator, videoDevice, audioDevice, type) => {
 };
 
 const onSetVideoDevice = (idx, setSelectedVideoDevice) => {
-  return (e) => {
-    setSelectedVideoDevice(idx);
-  };
+  try {
+    return (e) => {
+      setSelectedVideoDevice(idx);
+    };
+  } catch (error) {
+    console.log(error.message);
+  }
 };
 const onSetAudioDevice = (idx, setSelectedAudioDevice) => {
-  return (e) => {
-    setSelectedAudioDevice(idx);
-  };
+  try {
+    return (e) => {
+      setSelectedAudioDevice(idx);
+    };
+  } catch (error) {
+    console.log(error.message);
+  }
 };
 
 const stopTesting = (setSelectedVideoDevice, setSelectedAudioDevice) => {
   return () => {
-    const videoEl = document.getElementById(`test-video`);
-    const audioEl = document.getElementById(`test-audio`);
+    try {
+      const videoEl = document.getElementById(`test-video`);
+      const audioEl = document.getElementById(`test-audio`);
 
-    if (videoEl) {
-      videoEl.srcObject = null;
+      if (videoEl) {
+        videoEl.srcObject = null;
+      }
+      if (audioEl) {
+        audioEl.srcObject = null;
+      }
+      setSelectedVideoDevice(null);
+      setSelectedAudioDevice(null);
+    } catch (error) {
+      console.log(error.message);
     }
-    if (audioEl) {
-      audioEl.srcObject = null;
-    }
-    setSelectedVideoDevice(null);
-    setSelectedAudioDevice(null);
   };
 };
 export {

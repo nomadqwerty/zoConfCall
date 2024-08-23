@@ -18,6 +18,7 @@ const {
   onResumeConsumer,
   onStoppedScreen,
   onNewMessage,
+  onToggleMedia,
 } = require("./utils/socketHandlers");
 const PORT = 3050;
 const {
@@ -126,6 +127,9 @@ io.on("connection", async (socket) => {
 
   // BC message to room
   socket.on("newMessage", onNewMessage(socket, findRoom, conferences));
+
+  // media controls.
+  socket.on("toggleMedia", onToggleMedia(socket));
 });
 
 server.listen(PORT, () =>

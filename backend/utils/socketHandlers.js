@@ -975,6 +975,13 @@ const onNewMessage = (socket, findRoom, conferences) => {
   };
 };
 
+const onToggleMedia = (socket) => {
+  return (data) => {
+    console.log(data, "mute");
+    socket.to(data.accessKey).emit("toggleRemoteMedia", data);
+  };
+};
+
 module.exports = {
   onJoinRoom,
   onCreateRtcTransport,
@@ -989,4 +996,5 @@ module.exports = {
   onResumeConsumer,
   onStoppedScreen,
   onNewMessage,
+  onToggleMedia,
 };

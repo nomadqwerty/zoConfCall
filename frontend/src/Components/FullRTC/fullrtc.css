@@ -99,14 +99,14 @@
   border: 1px solid black;
 }
 .remoteVideo {
-  height: 20vh;
+  height: auto;
   width: 100%;
   overflow: hidden;
   margin: auto;
   border: 1px solid black;
 }
 .localVideo {
-  height: 20vh;
+  height: auto;
   width: 80%;
   overflow: hidden;
   margin: auto;

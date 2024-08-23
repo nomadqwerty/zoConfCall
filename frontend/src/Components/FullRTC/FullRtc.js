@@ -38,6 +38,7 @@ import {
   onParticipantLeft,
   onStoppedScreen,
   onIncomingMessage,
+  ontoggleRemoteMedia,
 } from "@/utils/socketHandlers";
 
 import {
@@ -79,6 +80,7 @@ const FullRtc = () => {
   const [selectedAudioDevice, setSelectedAudioDevice] = useState(null);
   const [userName, setUserName] = useState("");
   const [accessKey, setAccessKey] = useState("");
+  const [isVideoMuted, setIsVideoMuted] = useState(false);
 
   const router = useRouter();
   const confState = useContext(conferenceContext);
@@ -100,20 +102,33 @@ const FullRtc = () => {
 
   useEffect(() => {
     (async () => {
-      let params = window.location.search.replace("?", "");
-      params = params.split("&");
-      let key = params[0].split("=")[1];
-      let name = params[1].split("=")[1];
-      setAccessKey(key);
-      setUserName(name);
-      getUserMedia(
-        navigator,
-        setSocketId,
-        setSocket,
-        socketObj,
-        setVideoDevices,
-        setAudioDevices
-      );
+      try {
+        let params = window.location.search.replace("?", "");
+        if (params) {
+          params = params.split("&");
+
+          if (params.length > 1) {
+            let key = params[0].split("=")[1];
+            let name = params[1].split("=")[1];
+            setAccessKey(key);
+            setUserName(name);
+            getUserMedia(
+              navigator,
+              setSocketId,
+              setSocket,
+              socketObj,
+              setVideoDevices,
+              setAudioDevices
+            );
+          } else {
+            alert("you are not in a room");
+          }
+        } else {
+          alert("you are not in a room");
+        }
+      } catch (error) {
+        console.log(error.message);
+      }
     })();
   }, []);
 
@@ -211,6 +226,7 @@ const FullRtc = () => {
         )
       );
 
+      socket.on("toggleRemoteMedia", ontoggleRemoteMedia());
       socket.on(
         "participantLeft",
         onParticipantLeft(
@@ -354,8 +370,6 @@ const FullRtc = () => {
   const screenList = screenArray(remoteScreenStream);
   const messagesList = messagesArray(messages);
 
-  // TODO:
-
   useEffect(() => {
     if (videoDevices.length > 0) {
       console.log(videoDevices);
@@ -395,12 +409,14 @@ const FullRtc = () => {
       <div className="mediaWrap m-0 p-0">
         <div className="videoMediaWrap">
           <div className="localVideo">
+            <p>local stream</p>
             <video
               className="VideoElem"
               id={`local-video`}
               autoPlay
               playsInline
-            ></video>{" "}
+              muted={isVideoMuted}
+            ></video>
             <audio
               className="VideoElem"
               id={`local-audio`}
@@ -409,14 +425,23 @@ const FullRtc = () => {
               muted={true}
             ></audio>
           </div>
-          <div className="remoteVideos">{videoList}</div>
+          <div className="remoteVideos">
+            <p>remote streams</p>
+            {videoList}
+          </div>
           <div className="remoteAudios">{audioList}</div>
         </div>
         <div className="screenMediaWrap">
-          <div className="remoteScreens">{screenList}</div>
+          <div className="remoteScreens">
+            <p>remote screens</p>
+            {screenList}
+          </div>
         </div>
         <div className="chatMediaWrap">
-          <div className="chatFeeds">{messagesList}</div>
+          <div className="chatFeeds">
+            <p>messages</p>
+            {messagesList}
+          </div>
           <form
             className="chatInputWrap"
             onSubmit={onSendMessage(
@@ -445,6 +470,7 @@ const FullRtc = () => {
           <div className="mediaSettings">
             <div className="testMediaWrap">
               <div className="testVideo">
+                <p>Test/Select media</p>
                 <div className="videoElemWrap">
                   <video
                     className="VideoElem"
@@ -507,7 +533,9 @@ const FullRtc = () => {
                   videoParams,
                   setIsStreamingVideo,
                   producerTransports,
-                  videoDevices[selectedVideoDevice || 0]
+                  videoDevices[selectedVideoDevice || 0],
+                  socket,
+                  accessKey
                 )}
               >
                 video
@@ -520,7 +548,9 @@ const FullRtc = () => {
                   audioParams,
                   setIsStreamingAudio,
                   producerTransports,
-                  audioDevices[selectedAudioDevice || 0]
+                  audioDevices[selectedAudioDevice || 0],
+                  socket,
+                  accessKey
                 )}
               >
                 audio
